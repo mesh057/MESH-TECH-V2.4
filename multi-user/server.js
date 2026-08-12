@@ -17,6 +17,12 @@ function companionAuthorized(req) {
   return Boolean(configuredToken) && supplied.length === configuredToken.length && require('crypto').timingSafeEqual(Buffer.from(supplied), Buffer.from(configuredToken));
 }
 
+function uptimeRegistrationProof() {
+  const secret = String(process.env.MESH_UPTIME_RELAY_SECRET || '').trim();
+  if (!secret) throw new Error('MESH_UPTIME_RELAY_SECRET must be configured for independent uptime alerts.');
+  return require('crypto').createHmac('sha256', secret).update('mesh-ai-uptime-owner-registration-v1').digest('hex');
+}
+
 function json(res, status, payload) {
   const body = JSON.stringify(payload);
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(body) });
@@ -62,6 +68,9 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'GET' && url.pathname === '/api/companion/notifications') {
         return json(res, 200, { ok: true, ...pushStatus() });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/companion/uptime-registration') {
+        return json(res, 200, { ok: true, registrationProof: uptimeRegistrationProof() });
       }
       if (req.method === 'POST' && url.pathname === '/api/companion/chat') {
         const data = await body(req, 4_500_000);

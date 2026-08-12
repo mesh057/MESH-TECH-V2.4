@@ -143,6 +143,11 @@ The companion uses the following protected endpoints. They require `Authorizatio
 | `POST /api/companion/chat` | Sends a Normal or Agent MESH AI question, optionally with one JPEG, PNG, or WebP image. Agent mode may return relevant public-source links. |
 | `POST /api/companion/push-token` | Registers the owner Android device for WhatsApp disconnect and recovery alerts. |
 | `GET /api/companion/notifications` | Reports whether an owner push-alert device is registered. |
+| `POST /api/companion/uptime-registration` | Returns the signed owner-device registration proof for the independently hosted outage relay. |
+
+### Independent host-outage monitoring
+
+The built-in WhatsApp alerts can report a connection close only while the bot process still runs. To receive an alert when the entire hosting service becomes unreachable, configure an external uptime monitor to check `https://YOUR-BOT-HOST/health` and send its down/recovery events to the independently published MESH AI companion relay. Add the same private `MESH_UPTIME_RELAY_SECRET` to the bot host and the companion relay configuration. The detailed configuration steps are in the companion project’s `UPTIME_MONITOR_SETUP.md`.
 
 ## Multi-user API overview
 
