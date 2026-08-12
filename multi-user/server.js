@@ -4,10 +4,17 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { MultiUserSessionManager } = require('./session-manager');
+const { askCompanion, getCompanionStatus, applyCompanionControl } = require('./companion-service');
 
 const manager = new MultiUserSessionManager();
 const port = Number(process.env.MULTI_USER_PORT || process.env.PORT || 3000);
 const rate = new Map();
+
+function companionAuthorized(req) {
+  const configuredToken = String(process.env.MESH_COMPANION_CONTROL_TOKEN || '').trim();
+  const supplied = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  return Boolean(configuredToken) && supplied.length === configuredToken.length && require('crypto').timingSafeEqual(Buffer.from(supplied), Buffer.from(configuredToken));
+}
 
 function json(res, status, payload) {
   const body = JSON.stringify(payload);
@@ -24,10 +31,10 @@ function allowed(ip) {
   return item.count <= 10;
 }
 
-async function body(req) {
+async function body(req, maxLength = 32_000) {
   let raw = '';
   for await (const chunk of req) raw += chunk;
-  if (raw.length > 32_000) throw new Error('Request body is too large.');
+  if (raw.length > maxLength) throw new Error('Request body is too large.');
   return raw ? JSON.parse(raw) : {};
 }
 
@@ -41,6 +48,20 @@ const server = http.createServer(async (req, res) => {
       return res.end(page);
     }
     if (req.method === 'GET' && url.pathname === '/health') return json(res, 200, { ok: true, bot: 'MESH TECH MD', multiUser: true, active: manager.count() });
+    if (url.pathname.startsWith('/api/companion/')) {
+      if (!companionAuthorized(req)) return json(res, 401, { ok: false, error: 'A valid owner control token is required.' });
+      if (req.method === 'GET' && url.pathname === '/api/companion/status') return json(res, 200, getCompanionStatus());
+      if (req.method === 'POST' && url.pathname === '/api/companion/control') {
+        const data = await body(req);
+        return json(res, 200, applyCompanionControl(String(data.action || '')));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/companion/chat') {
+        const data = await body(req, 4_500_000);
+        const result = await askCompanion({ message: data.message, mode: data.mode, conversationId: data.conversationId, image: data.image });
+        return json(res, 200, { ok: true, ...result });
+      }
+      return json(res, 404, { ok: false, error: 'Companion endpoint not found.' });
+    }
     if (req.method === 'GET' && url.pathname === '/api/status') {
       const active = manager.list();
       return json(res, 200, { ok: true, multiUser: true, active, botStatus: active.length ? 'initialized' : 'waiting', totalActive: active.length, registered: active.some(item => item.status === 'running') });

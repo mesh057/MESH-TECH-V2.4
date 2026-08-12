@@ -4,6 +4,7 @@ const path = require("path");
 const { generateWAMessageFromContent } = require("@whiskeysockets/baileys");
 const { toggleAntidelete } = require("../antidelete");
 const meshAi = require("../ai");
+const { setValue } = require("../system/storage");
 
 // Default mode
 if (!global.mode) global.mode = "self";
@@ -79,6 +80,7 @@ async function handleCommand(conn, msg) {
       return reply("🚫 *Only Owner Can Switch Modes*");
 
     global.mode = "self";
+    setValue("meshBotMode", "self");
     return reply("🔒 BOT IS NOW IN *SELF MODE* — Only Owner can use me!");
   }
 
@@ -87,6 +89,7 @@ async function handleCommand(conn, msg) {
       return reply("🚫 *Only Owner Can Switch Modes*");
 
     global.mode = "public";
+    setValue("meshBotMode", "public");
     return reply("🌍 BOT IS NOW IN *PUBLIC MODE* — Everyone can use me!");
   }
 

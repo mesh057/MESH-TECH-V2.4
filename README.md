@@ -126,9 +126,21 @@ Copy the relevant settings from `.env.ai.example` into your hosting provider’s
 | `managed` | You want the bot to call an AI account that you own with usage-based billing. | `MESH_AI_API_KEY`, `MESH_AI_MANAGED_BASE_URL`, and `MESH_AI_MANAGED_MODEL` |
 | `ollama` | You run a model yourself on a reachable server. | `MESH_AI_OLLAMA_BASE_URL` and `MESH_AI_OLLAMA_MODEL` |
 
-Optional live web grounding uses `MESH_AI_WEB_SEARCH_MODE=auto` and a private `MESH_AI_TAVILY_API_KEY`. In `auto` mode, MESH AI searches current public sources for time-sensitive questions, such as news, weather, prices, results, or explicit requests for sources; it attaches the source links to the answer. Use `always` to search every question or `off` to disable web search.
+Optional live web grounding uses `MESH_AI_WEB_SEARCH_MODE=auto` and a private `MESH_AI_TAVILY_API_KEY`. In `auto` mode, MESH AI searches current public sources for time-sensitive questions, such as news, weather, prices, results, or explicit requests for sources, then attaches the source links to the answer. Use `always` to search every question or `off` to disable web search.
 
 For self-hosted mode, `http://127.0.0.1:11434` works only when Ollama and the bot run on the same machine. Use a private network address or protected HTTPS endpoint when the model is on another host.
+
+### Android MESH AI Companion
+
+The optional Android companion app connects to this hosted service through a protected owner-control API. Set a long private `MESH_COMPANION_CONTROL_TOKEN` in the host environment, then enter the public HTTPS host address and token only in the companion’s Settings screen. The app can read status, switch the hosted bot between public and self mode, control global chatbot replies, and ask the same MESH AI service without storing WhatsApp sessions or AI keys in the APK.
+
+The companion uses the following protected endpoints. They require `Authorization: Bearer <MESH_COMPANION_CONTROL_TOKEN>` and should never be exposed through a public client without that token.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/companion/status` | Reports public/self mode, automatic-reply state, MESH AI state, provider mode, and web-search readiness. |
+| `POST /api/companion/control` | Accepts `bot_public`, `bot_self`, `chatbot_on`, `chatbot_off`, `mesh_ai_on`, or `mesh_ai_off`. |
+| `POST /api/companion/chat` | Sends a Normal or Agent MESH AI question, optionally with one JPEG, PNG, or WebP image. Agent mode may return relevant public-source links. |
 
 ## Multi-user API overview
 

@@ -11,6 +11,7 @@ const MAX_QUESTION_LENGTH = 2400;
 const MAX_REPLY_LENGTH = 3500;
 const MAX_SEARCH_SOURCES = 3;
 const CHATBOT_AUTOREPLY_KEY = 'meshAiAutoReplyEnabled';
+const MESH_AI_ENABLED_KEY = 'meshAiServiceEnabled';
 const conversationHistory = new Map();
 
 function truthy(value, fallback = false) {
@@ -263,8 +264,14 @@ async function requestOllama(config, messages) {
 }
 
 function currentEnabled(config) {
-  if (typeof global.meshAiEnabled !== 'boolean') global.meshAiEnabled = config.enabled;
-  return global.meshAiEnabled;
+  const stored = safeValue(MESH_AI_ENABLED_KEY, undefined);
+  if (typeof stored === 'boolean') return stored;
+  return config.enabled;
+}
+
+function setMeshAiEnabled(enabled) {
+  setValue(MESH_AI_ENABLED_KEY, Boolean(enabled));
+  return Boolean(enabled);
 }
 
 function configurationMessage(config) {
@@ -400,9 +407,9 @@ async function run({ args = [], chatId, sender, isOwner = false, reply }) {
 
   if (normalizedAction === 'on' || normalizedAction === 'off') {
     if (!isOwner) return reply('🚫 *Only the bot owner can change the MESH AI state.*');
-    global.meshAiEnabled = normalizedAction === 'on';
-    const state = global.meshAiEnabled ? 'enabled' : 'disabled';
-    return reply(`✅ *${config.assistantName} is now ${state}* for this bot run. The setting resets when the bot restarts.`);
+    const enabled = setMeshAiEnabled(normalizedAction === 'on');
+    const state = enabled ? 'enabled' : 'disabled';
+    return reply(`✅ *${config.assistantName} is now ${state}* for the hosted bot.`);
   }
 
   return answerQuestion({ question: action, chatId, sender, reply });
@@ -442,8 +449,10 @@ async function autoReply({ text, chatId, sender, isGroup = false, fromMe = false
 
 function resetRuntimeState({ clearAutoReply = false } = {}) {
   conversationHistory.clear();
-  delete global.meshAiEnabled;
-  if (clearAutoReply) deleteKey(CHATBOT_AUTOREPLY_KEY);
+  if (clearAutoReply) {
+    deleteKey(CHATBOT_AUTOREPLY_KEY);
+    deleteKey(MESH_AI_ENABLED_KEY);
+  }
 }
 
 module.exports = {
@@ -453,6 +462,8 @@ module.exports = {
   autoReplyEnabled,
   isChatbotAutoReplyEnabled,
   setChatbotAutoReplyEnabled,
+  isMeshAiEnabled: () => currentEnabled(getMeshAiConfig()),
+  setMeshAiEnabled,
   getMeshAiConfig,
   buildSystemPrompt,
   extractManagedText,

@@ -14,6 +14,7 @@ const { storeMessage, handleMessageRevocation } = require("./antidelete");
 const AntiLinkKick = require("./antilinkick.js");
 const { antibugHandler } = require("./antibug.js"); // ✅ import correct function
 const meshAi = require("./ai");
+const { getValue } = require("./system/storage");
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
@@ -33,6 +34,7 @@ async function startBot() {
   global.signature = settings.signature || "> MESH TECH MD ✓";
   global.owner = ownerJid;
   global.ownerNumber = ownerRaw;
+  global.mode = getValue("meshBotMode") === "public" ? "public" : "self";
 
   // ✅ Flags
   global.antilink = {};
@@ -175,7 +177,7 @@ async function startBot() {
     // ✅ MESH AI automatic direct-message replies
     // The owner enables the global chatbot with `.chatbot on`. Automatic replies
     // are never sent in groups, status broadcasts, bot-authored messages, or self mode.
-    if (global.mode === "public") {
+    if (getValue("meshBotMode") === "public") {
       try {
         await meshAi.autoReply({
           text,
