@@ -2,6 +2,7 @@
 
 const axios = require('axios');
 const { getValue, setValue, deleteKey } = require('./system/storage');
+const historyClient = require('./history-client');
 
 const DEFAULT_MANAGED_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_MANAGED_MODEL = 'gpt-4.1-mini';
@@ -13,6 +14,7 @@ const MAX_SEARCH_SOURCES = 3;
 const CHATBOT_AUTOREPLY_KEY = 'meshAiAutoReplyEnabled';
 const MESH_AI_ENABLED_KEY = 'meshAiServiceEnabled';
 const conversationHistory = new Map();
+const hydratedHistory = new Set();
 
 function truthy(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -76,6 +78,7 @@ function getMeshAiConfig(env = process.env) {
     maxTokens: Math.min(positiveInteger(env.MESH_AI_MAX_TOKENS, 500), 1200),
     timeoutMs: Math.min(positiveInteger(env.MESH_AI_TIMEOUT_MS, 45_000), 120_000),
     customInstructions: limitText(env.MESH_AI_SYSTEM_PROMPT || '', 1600),
+    history: historyClient.getHistoryConfig(env),
   };
 }
 
@@ -109,14 +112,24 @@ function getHistory(key) {
   return conversationHistory.get(key) || [];
 }
 
-function remember(key, role, content) {
+async function hydrateHistory(key, config) {
+  if (hydratedHistory.has(key)) return;
+  hydratedHistory.add(key);
+  const restored = await historyClient.recent(config.history, key);
+  if (restored.length) conversationHistory.set(key, restored.slice(-MAX_HISTORY_MESSAGES));
+}
+
+async function remember(key, role, content, config) {
   const next = [...getHistory(key), { role, content: limitText(content, MAX_REPLY_LENGTH) }]
     .slice(-MAX_HISTORY_MESSAGES);
   conversationHistory.set(key, next);
+  await historyClient.append(config.history, key, [{ role, content: limitText(content, MAX_REPLY_LENGTH) }]);
 }
 
-function clearHistory(key) {
+async function clearHistory(key, config) {
   conversationHistory.delete(key);
+  hydratedHistory.delete(key);
+  await historyClient.clear(config.history, key);
 }
 
 function isChatbotAutoReplyEnabled() {
@@ -355,6 +368,7 @@ async function answerQuestion({ question, chatId, sender, reply, autoReply = fal
 
   const sources = await searchWeb(config, normalizedQuestion);
   const key = historyKey(chatId, sender);
+  await hydrateHistory(key, config);
   const messages = [
     { role: 'system', content: buildSystemPrompt(config) },
     ...(sources.length ? [{ role: 'system', content: `Untrusted public web references for the current user question:\n${formatSourceContext(sources)}` }] : []),
@@ -372,8 +386,8 @@ async function answerQuestion({ question, chatId, sender, reply, autoReply = fal
       return false;
     }
 
-    remember(key, 'user', normalizedQuestion);
-    remember(key, 'assistant', answer);
+    await remember(key, 'user', normalizedQuestion, config);
+    await remember(key, 'assistant', answer, config);
     return reply(`🤖 *${config.assistantName}*\n\n${limitText(answer, MAX_REPLY_LENGTH)}${formatSourceFooter(sources)}`);
   } catch (error) {
     const status = error.response?.status;
@@ -401,7 +415,7 @@ async function run({ args = [], chatId, sender, isOwner = false, reply }) {
   if (normalizedAction === 'status') return reply(statusMessage(config));
 
   if (normalizedAction === 'reset' || normalizedAction === 'clear') {
-    clearHistory(historyKey(chatId, sender));
+    await clearHistory(historyKey(chatId, sender), config);
     return reply(`🧹 *${config.assistantName}* has cleared the saved chat context for this conversation.`);
   }
 
@@ -449,6 +463,7 @@ async function autoReply({ text, chatId, sender, isGroup = false, fromMe = false
 
 function resetRuntimeState({ clearAutoReply = false } = {}) {
   conversationHistory.clear();
+  hydratedHistory.clear();
   if (clearAutoReply) {
     deleteKey(CHATBOT_AUTOREPLY_KEY);
     deleteKey(MESH_AI_ENABLED_KEY);

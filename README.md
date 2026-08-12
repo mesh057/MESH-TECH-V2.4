@@ -114,7 +114,7 @@ MESH AI is the original smart assistant for MESH TECH MD. Its identity, reply st
 | `.chatbot on` | Owner-only command that enables automatic MESH AI replies for every direct message. |
 | `.chatbot off` | Owner-only command that stops automatic replies for every direct message. |
 | `.chatbot status` | Shows the global chatbot state, provider readiness, and web-search state without exposing secrets. |
-| `.ai reset` | Clears the stored short conversation context for the current chat. |
+| `.ai reset` | Clears the durable saved conversation context for the current chat. |
 | `.ai on` / `.ai off` | Owner-only controls that enable or disable MESH AI until the bot restarts. |
 
 Automatic direct-message replies are **off by default**. After configuring the provider and putting the bot in public mode with `.public`, the owner can send `.chatbot on` to let MESH AI answer ordinary messages from all direct-message users. Send `.chatbot off` at any time to stop the automatic replies globally. Automatic replies never run in groups, status broadcasts, or when the bot is in self mode.
@@ -144,6 +144,11 @@ The companion uses the following protected endpoints. They require `Authorizatio
 | `POST /api/companion/push-token` | Registers the owner Android device for WhatsApp disconnect and recovery alerts. |
 | `GET /api/companion/notifications` | Reports whether an owner push-alert device is registered. |
 | `POST /api/companion/uptime-registration` | Returns the signed owner-device registration proof for the independently hosted outage relay. |
+| `POST /api/companion/history/clear` | Clears the owner companion conversation from the durable history service. |
+
+### Durable conversation history
+
+MESH AI can preserve bounded conversation context across bot restarts using the independently hosted companion database. It stores encrypted message content, restores only recent relevant messages, and retains at most 40 messages per conversation. Set `MESH_HISTORY_RELAY_URL` to the published MESH AI companion API address and set the same private `MESH_HISTORY_RELAY_TOKEN` on both the bot host and companion relay. Do not put this token in the APK or GitHub. The owner can clear a WhatsApp conversation with `.ai reset`; clearing the companion conversation removes its remote history as well.
 
 ### Independent host-outage monitoring
 

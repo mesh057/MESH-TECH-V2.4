@@ -4,7 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { MultiUserSessionManager } = require('./session-manager');
-const { askCompanion, getCompanionStatus, applyCompanionControl } = require('./companion-service');
+const { askCompanion, clearCompanionHistory, getCompanionStatus, applyCompanionControl } = require('./companion-service');
 const { registerPushToken, pushStatus } = require('./push-notifier');
 
 const manager = new MultiUserSessionManager();
@@ -71,6 +71,11 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'POST' && url.pathname === '/api/companion/uptime-registration') {
         return json(res, 200, { ok: true, registrationProof: uptimeRegistrationProof() });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/companion/history/clear') {
+        const data = await body(req);
+        await clearCompanionHistory(String(data.conversationId || 'owner-mobile-companion'));
+        return json(res, 200, { ok: true });
       }
       if (req.method === 'POST' && url.pathname === '/api/companion/chat') {
         const data = await body(req, 4_500_000);

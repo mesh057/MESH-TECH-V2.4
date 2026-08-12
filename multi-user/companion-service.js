@@ -2,11 +2,13 @@
 
 const axios = require('axios');
 const meshAi = require('../ai');
+const historyClient = require('../history-client');
 const { getValue, setValue } = require('../system/storage');
 
 const MAX_IMAGE_BASE64_LENGTH = 3_200_000;
 const MAX_CONVERSATION_MESSAGES = 10;
 const conversations = new Map();
+const hydratedConversations = new Set();
 
 function limitText(value, limit) {
   const text = String(value || '').trim();
@@ -26,9 +28,23 @@ function getHistory(conversationId) {
   return conversations.get(conversationId) || [];
 }
 
-function remember(conversationId, role, content) {
+async function hydrateConversation(conversationId, config) {
+  if (hydratedConversations.has(conversationId)) return;
+  hydratedConversations.add(conversationId);
+  const restored = await historyClient.recent(config.history, conversationId);
+  if (restored.length) conversations.set(conversationId, restored.slice(-MAX_CONVERSATION_MESSAGES));
+}
+
+async function remember(conversationId, role, content, config) {
   const next = [...getHistory(conversationId), { role, content: limitText(content, 3200) }].slice(-MAX_CONVERSATION_MESSAGES);
   conversations.set(conversationId, next);
+  await historyClient.append(config.history, conversationId, [{ role, content: limitText(content, 3200) }]);
+}
+
+async function clearCompanionHistory(conversationId = 'owner-mobile-companion') {
+  conversations.delete(conversationId);
+  hydratedConversations.delete(conversationId);
+  return historyClient.clear(meshAi.getMeshAiConfig().history, conversationId);
 }
 
 function titleFor(question) {
@@ -136,14 +152,15 @@ async function askCompanion({ message, mode = 'normal', conversationId = 'owner-
   if (image && !safeImage) throw new Error('Use a JPEG, PNG, or WebP image smaller than 2.4 MB.');
 
   const sources = await searchForAgent(config, question || 'Describe this image', selectedMode);
+  await hydrateConversation(conversationId, config);
   const messages = managedMessages({ config, question: question || 'Describe this image', mode: selectedMode, conversationId, sources, image: safeImage });
   const answer = config.provider === 'ollama'
     ? await askOllama(config, messages, safeImage)
     : await askManaged(config, messages);
   if (!answer) throw new Error('MESH AI did not return a usable answer.');
 
-  remember(conversationId, 'user', question || 'Describe this image');
-  remember(conversationId, 'assistant', answer);
+  await remember(conversationId, 'user', question || 'Describe this image', config);
+  await remember(conversationId, 'assistant', answer, config);
   return {
     answer: limitText(answer, 3500),
     title: titleFor(question || 'Image analysis'),
@@ -176,4 +193,4 @@ function applyCompanionControl(action) {
   return getCompanionStatus();
 }
 
-module.exports = { askCompanion, getCompanionStatus, applyCompanionControl, validImage, titleFor };
+module.exports = { askCompanion, clearCompanionHistory, getCompanionStatus, applyCompanionControl, validImage, titleFor };
