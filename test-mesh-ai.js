@@ -14,12 +14,21 @@ const meshEnvKeys = [
   'MESH_AI_OLLAMA_BASE_URL',
   'MESH_AI_OLLAMA_MODEL',
   'MESH_AI_SYSTEM_PROMPT',
+  'MESH_AI_WEB_SEARCH_MODE',
+  'MESH_AI_TAVILY_API_KEY',
+  'MESH_AI_TAVILY_BASE_URL',
+  'MESH_AI_TAVILY_SEARCH_DEPTH',
+  'MESH_AI_TAVILY_MAX_RESULTS',
 ];
 
 const originalEnv = Object.fromEntries(meshEnvKeys.map((key) => [key, process.env[key]]));
+const originalMode = global.mode;
+const originalOwners = global.owner;
 const directChat = '254700000001@s.whatsapp.net';
+const anotherDirectChat = '254700000002@s.whatsapp.net';
 const groupChat = '12345@g.us';
-const sender = '254700000001@s.whatsapp.net';
+const ownerSender = '254700000001@s.whatsapp.net';
+const regularSender = '254700000002@s.whatsapp.net';
 
 function restoreEnvironment() {
   for (const key of meshEnvKeys) {
@@ -28,39 +37,36 @@ function restoreEnvironment() {
   }
 }
 
-async function invokeAi(args, isOwner = false, chatId = directChat) {
+async function invokeAi(args, isOwner = false, chatId = directChat, sender = ownerSender) {
   const replies = [];
   await meshAi.run({
     args,
     chatId,
     sender,
-    isGroup: chatId.endsWith('@g.us'),
     isOwner,
     reply: async (message) => replies.push(message),
   });
   return replies.at(-1);
 }
 
-async function invokeChatbot(args, chatId = directChat) {
+async function invokeChatbot(args, isOwner = false) {
   const replies = [];
   await meshAi.chatbot({
     args,
-    chatId,
-    sender,
-    isGroup: chatId.endsWith('@g.us'),
+    isOwner,
     reply: async (message) => replies.push(message),
   });
   return replies.at(-1);
 }
 
-async function invokeDispatcher(text) {
+async function invokeDispatcher(text, sender = regularSender) {
   const replies = [];
   const conn = {
     user: { id: '254700000099:1@s.whatsapp.net' },
     sendMessage: async (_chatId, payload) => replies.push(payload.text),
   };
   const msg = {
-    key: { remoteJid: directChat, participant: sender, fromMe: false },
+    key: { remoteJid: sender, participant: sender, fromMe: false },
     message: { conversation: text },
   };
   await handleCommand(conn, msg);
@@ -72,9 +78,13 @@ async function main() {
     process.env.MESH_AI_ENABLED = 'true';
     process.env.MESH_AI_PROVIDER = 'managed';
     process.env.MESH_AI_NAME = 'MESH AI';
-    delete process.env.MESH_AI_API_KEY;
     process.env.MESH_AI_MANAGED_MODEL = 'test-model';
-    meshAi.resetRuntimeState({ clearPreferences: true });
+    process.env.MESH_AI_WEB_SEARCH_MODE = 'auto';
+    delete process.env.MESH_AI_API_KEY;
+    delete process.env.MESH_AI_TAVILY_API_KEY;
+    meshAi.resetRuntimeState({ clearAutoReply: true });
+    global.mode = 'public';
+    global.owner = [ownerSender];
 
     const config = meshAi.getMeshAiConfig();
     assert.equal(config.provider, 'managed');
@@ -85,47 +95,49 @@ async function main() {
     const prompt = meshAi.buildSystemPrompt(config);
     assert(prompt.includes('MESH AI'));
     assert(prompt.includes('Do not claim to be BWM XMD'));
+    assert(prompt.includes('public web references'));
 
     const help = await invokeAi(['help']);
-    assert(help.includes('.ai How do I make a sticker?'));
     assert(help.includes('.chatbot on'));
+    assert(help.includes('all DMs'));
 
     const missingConfig = await invokeAi(['Hello', 'MESH', 'AI']);
     assert(missingConfig.includes('not configured yet'));
     assert(!missingConfig.includes('MESH_AI_API_KEY='));
 
-    const originalMode = global.mode;
-    global.mode = 'public';
     const defaultState = await invokeChatbot(['status']);
-    assert(defaultState.includes('off for this DM'));
-    assert.equal(meshAi.isChatbotEnabled(directChat), false);
+    assert(defaultState.includes('Automatic direct-message replies: off'));
+    assert.equal(meshAi.isChatbotAutoReplyEnabled(), false);
 
-    const routedChatbot = await invokeDispatcher('.chatbot status');
-    assert(routedChatbot.includes('off for this DM'));
+    const denied = await invokeChatbot(['on']);
+    assert(denied.includes('Only the bot owner'));
+
+    const routedStatus = await invokeDispatcher('.chatbot status');
+    assert(routedStatus.includes('Automatic direct-message replies: off'));
+
+    const routedEnable = await invokeDispatcher('.chatbot on', ownerSender);
+    assert(routedEnable.includes('Global chatbot enabled'), routedEnable);
+    assert.equal(meshAi.isChatbotAutoReplyEnabled(), true);
+
     const routedAlias = await invokeDispatcher('.mesh Tell me about MESH AI');
     assert(routedAlias.includes('not configured yet'));
-    global.mode = originalMode;
-
-    const enabled = await invokeChatbot(['on']);
-    assert(enabled.includes('Chatbot enabled'));
-    assert.equal(meshAi.isChatbotEnabled(directChat), true);
 
     process.env.MESH_AI_API_KEY = 'test-key-only-for-local-eligibility-checks';
     assert.equal(meshAi.autoReplyEnabled({ text: 'Hello', chatId: directChat, isGroup: false, fromMe: false }), true);
+    assert.equal(meshAi.autoReplyEnabled({ text: 'Hello', chatId: anotherDirectChat, isGroup: false, fromMe: false }), true);
     assert.equal(meshAi.autoReplyEnabled({ text: '.menu', chatId: directChat, isGroup: false, fromMe: false }), false);
     assert.equal(meshAi.autoReplyEnabled({ text: 'Hello', chatId: groupChat, isGroup: true, fromMe: false }), false);
     assert.equal(meshAi.autoReplyEnabled({ text: 'Hello', chatId: directChat, isGroup: false, fromMe: true }), false);
 
-    const groupControl = await invokeChatbot(['on'], groupChat);
-    assert(groupControl.includes('only in direct messages'));
+    assert.equal(meshAi.shouldSearchQuestion(meshAi.getMeshAiConfig(), 'What is the latest news today?'), false);
+    process.env.MESH_AI_TAVILY_API_KEY = 'test-search-key-only-for-local-eligibility-checks';
+    assert.equal(meshAi.shouldSearchQuestion(meshAi.getMeshAiConfig(), 'What is the latest news today?'), true);
+    assert.equal(meshAi.shouldSearchQuestion(meshAi.getMeshAiConfig(), 'Explain JavaScript arrays'), false);
 
-    const disabled = await invokeChatbot(['off']);
-    assert(disabled.includes('Chatbot disabled for this DM'));
-    assert.equal(meshAi.isChatbotEnabled(directChat), false);
+    const routedDisable = await invokeDispatcher('.chatbot off', ownerSender);
+    assert(routedDisable.includes('Global chatbot disabled'));
+    assert.equal(meshAi.isChatbotAutoReplyEnabled(), false);
     assert.equal(meshAi.autoReplyEnabled({ text: 'Hello', chatId: directChat, isGroup: false, fromMe: false }), false);
-
-    const denied = await invokeAi(['off']);
-    assert(denied.includes('Only the bot owner'));
 
     const ownerDisabled = await invokeAi(['off'], true);
     assert(ownerDisabled.includes('now disabled'));
@@ -153,10 +165,12 @@ async function main() {
     assert.equal(ollamaConfig.provider, 'ollama');
     assert.equal(ollamaConfig.ollama.model, 'llama3.2:3b');
 
-    console.log('PASS: MESH AI provider settings, DM opt-in controls, and automatic-reply safeguards are working.');
+    console.log('PASS: MESH AI global owner controls, automatic DM replies, web-search safeguards, and provider settings are working.');
   } finally {
-    meshAi.resetRuntimeState({ clearPreferences: true });
+    meshAi.resetRuntimeState({ clearAutoReply: true });
     restoreEnvironment();
+    global.mode = originalMode;
+    global.owner = originalOwners;
   }
 }
 

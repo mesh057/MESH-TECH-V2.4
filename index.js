@@ -173,8 +173,8 @@ async function startBot() {
     }
 
     // ✅ MESH AI automatic direct-message replies
-    // A user must first opt in with `.chatbot on`. Automatic replies are never
-    // sent in groups, status broadcasts, bot-authored messages, or self mode.
+    // The owner enables the global chatbot with `.chatbot on`. Automatic replies
+    // are never sent in groups, status broadcasts, bot-authored messages, or self mode.
     if (global.mode === "public") {
       try {
         await meshAi.autoReply({

@@ -65,7 +65,9 @@ async function handleCommand(conn, msg) {
 
   const senderNum = senderId.replace(/\D/g, "");
   const botNum = (conn.user.id || "").replace(/\D/g, "");
-  const configuredOwners = (global.owner || []).map(jid => jid.replace(/\D/g, ""));
+  const configuredOwners = (Array.isArray(global.owner) ? global.owner : [global.owner])
+    .filter(Boolean)
+    .map(jid => String(jid).replace(/\D/g, ""));
   const isOwner = configuredOwners.includes(senderNum) || senderNum === botNum;
   const isDev = false; // No hidden developer bypass; ownership is fully controlled by settings.js
 
@@ -136,6 +138,7 @@ async function handleCommand(conn, msg) {
     chatId,
     isGroup,
     senderNum,
+    isOwner,
     reply
   });
 }
@@ -188,7 +191,7 @@ async function runCommand({
     }
 
     if (command === "chatbot") {
-      return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, reply });
+      return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
     }
 
     // 🔸 core functions

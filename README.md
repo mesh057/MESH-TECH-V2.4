@@ -111,15 +111,22 @@ MESH AI is the original smart assistant for MESH TECH MD. Its identity, reply st
 | `.ask <question>` | Alias for `.ai`. |
 | `.ai help` | Shows MESH AI usage and privacy controls. |
 | `.ai status` | Shows the active provider mode and readiness state without revealing credentials. |
+| `.chatbot on` | Owner-only command that enables automatic MESH AI replies for every direct message. |
+| `.chatbot off` | Owner-only command that stops automatic replies for every direct message. |
+| `.chatbot status` | Shows the global chatbot state, provider readiness, and web-search state without exposing secrets. |
 | `.ai reset` | Clears the stored short conversation context for the current chat. |
 | `.ai on` / `.ai off` | Owner-only controls that enable or disable MESH AI until the bot restarts. |
 
-Copy the relevant settings from `.env.ai.example` into your hosting provider’s private environment-variable panel. Keep `MESH_AI_API_KEY` private and never commit a real `.env` file, authentication folder, or session credential.
+Automatic direct-message replies are **off by default**. After configuring the provider and putting the bot in public mode with `.public`, the owner can send `.chatbot on` to let MESH AI answer ordinary messages from all direct-message users. Send `.chatbot off` at any time to stop the automatic replies globally. Automatic replies never run in groups, status broadcasts, or when the bot is in self mode.
+
+Copy the relevant settings from `.env.ai.example` into your hosting provider’s private environment-variable panel. Keep `MESH_AI_API_KEY`, `MESH_AI_TAVILY_API_KEY`, and all other credentials private; never commit a real `.env` file, authentication folder, or session credential.
 
 | Provider mode | Use when | Required settings |
 | --- | --- | --- |
 | `managed` | You want the bot to call an AI account that you own with usage-based billing. | `MESH_AI_API_KEY`, `MESH_AI_MANAGED_BASE_URL`, and `MESH_AI_MANAGED_MODEL` |
 | `ollama` | You run a model yourself on a reachable server. | `MESH_AI_OLLAMA_BASE_URL` and `MESH_AI_OLLAMA_MODEL` |
+
+Optional live web grounding uses `MESH_AI_WEB_SEARCH_MODE=auto` and a private `MESH_AI_TAVILY_API_KEY`. In `auto` mode, MESH AI searches current public sources for time-sensitive questions, such as news, weather, prices, results, or explicit requests for sources; it attaches the source links to the answer. Use `always` to search every question or `off` to disable web search.
 
 For self-hosted mode, `http://127.0.0.1:11434` works only when Ollama and the bot run on the same machine. Use a private network address or protected HTTPS endpoint when the model is on another host.
 
