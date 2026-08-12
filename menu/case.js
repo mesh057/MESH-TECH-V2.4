@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { generateWAMessageFromContent } = require("@whiskeysockets/baileys");
 const { toggleAntidelete } = require("../antidelete");
+const meshAi = require("../ai");
 
 // Default mode
 if (!global.mode) global.mode = "self";
@@ -52,7 +53,8 @@ async function handleCommand(conn, msg) {
   if (!text.startsWith(".")) return;
 
   const parts = text.trim().split(/ +/);
-  const command = parts[0].slice(1).toLowerCase();
+  const rawCommand = parts[0].slice(1).toLowerCase();
+  const command = ["mesh", "ask"].includes(rawCommand) ? "ai" : rawCommand;
   const args = parts.slice(1);
 
   const chatId = msg.key.remoteJid;
@@ -96,6 +98,7 @@ async function handleCommand(conn, msg) {
       chatId,
       isGroup,
       senderNum,
+      isOwner,
       reply
     });
   }
@@ -119,6 +122,7 @@ async function handleCommand(conn, msg) {
       chatId,
       isGroup,
       senderNum,
+      isOwner,
       reply
     });
   }
@@ -147,6 +151,7 @@ async function runCommand({
   chatId,
   isGroup,
   senderNum,
+  isOwner,
   reply
 }) {
   try {
@@ -175,6 +180,15 @@ async function runCommand({
     // 🔸 antidelete handler
     if (command === "antidelete") {
       return toggleAntidelete({ conn, m: msg, args, reply, jid: chatId });
+    }
+
+    // 🔸 MESH AI
+    if (command === "ai") {
+      return meshAi.run({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
+    }
+
+    if (command === "chatbot") {
+      return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, reply });
     }
 
     // 🔸 core functions

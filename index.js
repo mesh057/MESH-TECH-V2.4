@@ -13,6 +13,7 @@ const { loadSettings } = require("./settings");
 const { storeMessage, handleMessageRevocation } = require("./antidelete");
 const AntiLinkKick = require("./antilinkick.js");
 const { antibugHandler } = require("./antibug.js"); // ✅ import correct function
+const meshAi = require("./ai");
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
@@ -169,6 +170,24 @@ async function startBot() {
       await handleCommand(sock, msg, {});  
     } catch (err) {  
       console.error("❌ Command error:", err.message || err);  
+    }
+
+    // ✅ MESH AI automatic direct-message replies
+    // A user must first opt in with `.chatbot on`. Automatic replies are never
+    // sent in groups, status broadcasts, bot-authored messages, or self mode.
+    if (global.mode === "public") {
+      try {
+        await meshAi.autoReply({
+          text,
+          chatId: jid,
+          sender: msg.key.participant || msg.key.remoteJid,
+          isGroup: jid.endsWith("@g.us"),
+          fromMe: msg.key.fromMe,
+          reply: (replyText) => sock.sendMessage(jid, { text: replyText }, { quoted: msg })
+        });
+      } catch (err) {
+        console.error("❌ MESH AI automatic reply error:", err.message || err);
+      }
     }
   });
 

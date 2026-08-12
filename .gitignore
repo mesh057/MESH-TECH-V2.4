@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 !.env.multi-user.example
-!.env.multi-user.example
+!.env.ai.example
 
 # WhatsApp authentication and private sessions
 auth_info/
@@ -15,6 +15,7 @@ session/
 # Runtime databases, logs, and generated state
 data/
 database.json
+system/database.json
 *.log
 
 # Dependencies and local caches

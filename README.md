@@ -100,6 +100,29 @@ The current configuration is loaded from `settings.js`. Update the owner number,
 | Multi-user pairing service | `multi-user/server.js` | Serves the pairing page and controls isolated bot sessions. |
 | Session isolation | `multi-user/session-manager.js` | Stores each user session in a separate authentication directory. |
 
+## MESH AI
+
+MESH AI is the original smart assistant for MESH TECH MD. Its identity, reply style, and owner instructions are defined by this project, while its model connection is supplied by an AI account or self-hosted service that you control. It uses original MESH TECH branding and does not imitate another bot’s identity or replies.
+
+| Command | What it does |
+| --- | --- |
+| `.ai <question>` | Sends a question to MESH AI. |
+| `.mesh <question>` | Alias for `.ai`. |
+| `.ask <question>` | Alias for `.ai`. |
+| `.ai help` | Shows MESH AI usage and privacy controls. |
+| `.ai status` | Shows the active provider mode and readiness state without revealing credentials. |
+| `.ai reset` | Clears the stored short conversation context for the current chat. |
+| `.ai on` / `.ai off` | Owner-only controls that enable or disable MESH AI until the bot restarts. |
+
+Copy the relevant settings from `.env.ai.example` into your hosting provider’s private environment-variable panel. Keep `MESH_AI_API_KEY` private and never commit a real `.env` file, authentication folder, or session credential.
+
+| Provider mode | Use when | Required settings |
+| --- | --- | --- |
+| `managed` | You want the bot to call an AI account that you own with usage-based billing. | `MESH_AI_API_KEY`, `MESH_AI_MANAGED_BASE_URL`, and `MESH_AI_MANAGED_MODEL` |
+| `ollama` | You run a model yourself on a reachable server. | `MESH_AI_OLLAMA_BASE_URL` and `MESH_AI_OLLAMA_MODEL` |
+
+For self-hosted mode, `http://127.0.0.1:11434` works only when Ollama and the bot run on the same machine. Use a private network address or protected HTTPS endpoint when the model is on another host.
+
 ## Multi-user API overview
 
 The pairing page uses the following endpoints. Do not expose session access tokens publicly; they allow the holder to retrieve a pairing code or stop the associated session.

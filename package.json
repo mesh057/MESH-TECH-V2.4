@@ -6,6 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
+    "test:ai": "node test-mesh-ai.js",
     "install:legacy": "npm install --legacy-peer-deps"
   },
   "author": "MESH TECH",
