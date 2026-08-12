@@ -141,6 +141,8 @@ The companion uses the following protected endpoints. They require `Authorizatio
 | `GET /api/companion/status` | Reports public/self mode, automatic-reply state, MESH AI state, provider mode, and web-search readiness. |
 | `POST /api/companion/control` | Accepts `bot_public`, `bot_self`, `chatbot_on`, `chatbot_off`, `mesh_ai_on`, or `mesh_ai_off`. |
 | `POST /api/companion/chat` | Sends a Normal or Agent MESH AI question, optionally with one JPEG, PNG, or WebP image. Agent mode may return relevant public-source links. |
+| `POST /api/companion/push-token` | Registers the owner Android device for WhatsApp disconnect and recovery alerts. |
+| `GET /api/companion/notifications` | Reports whether an owner push-alert device is registered. |
 
 ## Multi-user API overview
 

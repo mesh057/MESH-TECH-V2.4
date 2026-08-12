@@ -15,6 +15,7 @@ const AntiLinkKick = require("./antilinkick.js");
 const { antibugHandler } = require("./antibug.js"); // ✅ import correct function
 const meshAi = require("./ai");
 const { getValue } = require("./system/storage");
+const { notifyBotEvent } = require("./multi-user/push-notifier");
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
@@ -54,12 +55,18 @@ async function startBot() {
 
     if (connection === "open") {  
       console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
+      void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
       rl.close();  
     }  
 
     if (connection === "close") {  
       const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);  
       console.log("❌ Disconnected. Reconnecting:", shouldReconnect);  
+      void notifyBotEvent({
+        event: shouldReconnect ? "whatsapp_disconnected" : "whatsapp_logged_out",
+        title: shouldReconnect ? "MESH AI bot disconnected" : "MESH AI bot needs attention",
+        body: shouldReconnect ? "WhatsApp disconnected. The hosted bot is attempting to reconnect." : "The WhatsApp session was logged out or stopped. Re-pair the bot when you can.",
+      });
       if (shouldReconnect) startBot();  
     }
   });

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { MultiUserSessionManager } = require('./session-manager');
 const { askCompanion, getCompanionStatus, applyCompanionControl } = require('./companion-service');
+const { registerPushToken, pushStatus } = require('./push-notifier');
 
 const manager = new MultiUserSessionManager();
 const port = Number(process.env.MULTI_USER_PORT || process.env.PORT || 3000);
@@ -54,6 +55,13 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST' && url.pathname === '/api/companion/control') {
         const data = await body(req);
         return json(res, 200, applyCompanionControl(String(data.action || '')));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/companion/push-token') {
+        const data = await body(req);
+        return json(res, 200, { ok: true, ...registerPushToken(data.token) });
+      }
+      if (req.method === 'GET' && url.pathname === '/api/companion/notifications') {
+        return json(res, 200, { ok: true, ...pushStatus() });
       }
       if (req.method === 'POST' && url.pathname === '/api/companion/chat') {
         const data = await body(req, 4_500_000);
