@@ -6,6 +6,7 @@ const path = require('path');
 const stateDir = path.resolve(process.env.MESH_ANTILINKKICK_STATE_DIR || process.cwd());
 const stateFile = path.join(stateDir, 'antilinkkick.json');
 const linkPattern = /(chat\.whatsapp\.com|t\.me|discord\.gg|wa\.me|bit\.ly|youtu\.be|https?:\/\/)/i;
+const defaultWarning = '⚠️ {user}, links are not allowed in this group. You will be removed now.';
 
 fs.mkdirSync(stateDir, { recursive: true });
 
@@ -25,7 +26,30 @@ function normalizeJid(jid) {
 }
 
 function isAntilinkKickEnabled(jid) {
-  return enabledChats[jid] === true;
+  const saved = enabledChats[jid];
+  return saved === true || Boolean(saved && typeof saved === 'object' && saved.enabled === true);
+}
+
+function getWarningTemplate(jid) {
+  const saved = enabledChats[jid];
+  return typeof saved === 'object' && typeof saved.warning === 'string' && saved.warning.trim()
+    ? saved.warning.trim()
+    : defaultWarning;
+}
+
+function updateGroupState(jid, changes) {
+  const saved = enabledChats[jid];
+  const current = typeof saved === 'object'
+    ? saved
+    : { enabled: saved === true, warning: defaultWarning };
+  enabledChats[jid] = { ...current, ...changes };
+  saveState();
+}
+
+function renderWarning(template, sender) {
+  const mention = `@${sender.split('@')[0]}`;
+  const replaced = String(template || defaultWarning).replace(/\{user\}|@user/gi, mention);
+  return replaced.includes(mention) ? replaced : `${mention}\n${replaced}`;
 }
 
 function textFromMessage(message) {
@@ -43,22 +67,37 @@ async function configureAntilinkKick({ m, args, reply, jid, isGroup }) {
 
   const option = (args[0] || '').toLowerCase();
   if (option === 'status') {
-    return reply(`🛡️ *Anti-link kick:* ${isAntilinkKickEnabled(jid) ? 'ENABLED ✅' : 'DISABLED ❌'}\n┃ Applies to: *This group*`);
+    return reply(`🛡️ *Anti-link kick:* ${isAntilinkKickEnabled(jid) ? 'ENABLED ✅' : 'DISABLED ❌'}\n┃ Applies to: *This group*\n┃ Warning: ${getWarningTemplate(jid)}`);
+  }
+
+  if (option === 'warning') {
+    const requestedTemplate = args.slice(1).join(' ').trim();
+    if (!requestedTemplate) {
+      return reply(`Usage: *.antilinkkick warning Your message with {user}*\n┃ Current: ${getWarningTemplate(jid)}`);
+    }
+    if (requestedTemplate.toLowerCase() === 'reset') {
+      updateGroupState(jid, { warning: defaultWarning });
+      return reply('🛡️ Anti-link-kick warning reset to the default message.');
+    }
+    if (requestedTemplate.length > 600) {
+      return reply('⚠️ Keep the anti-link-kick warning under 600 characters.');
+    }
+    updateGroupState(jid, { warning: requestedTemplate });
+    return reply(`🛡️ Anti-link-kick warning saved.\n┃ Preview: ${renderWarning(requestedTemplate, 'user@s.whatsapp.net')}`);
   }
 
   if (!['on', 'off'].includes(option)) {
-    return reply('Usage: *.antilinkkick on* | *.antilinkkick off* | *.antilinkkick status*');
+    return reply('Usage: *.antilinkkick on* | *.antilinkkick off* | *.antilinkkick status* | *.antilinkkick warning <message>*');
   }
 
-  enabledChats[jid] = option === 'on';
+  updateGroupState(jid, { enabled: option === 'on' });
   global.antilinkkick = global.antilinkkick || {};
-  global.antilinkkick[jid] = enabledChats[jid];
-  saveState();
+  global.antilinkkick[jid] = isAntilinkKickEnabled(jid);
 
-  return reply(`🛡️ Anti-link kick is now *${enabledChats[jid] ? 'ENABLED ✅' : 'DISABLED ❌'}* for this group.\n┃ The bot must be a group admin to remove non-admin link senders.`);
+  return reply(`🛡️ Anti-link kick is now *${isAntilinkKickEnabled(jid) ? 'ENABLED ✅' : 'DISABLED ❌'}* for this group.\n┃ The bot must be a group admin to remove non-admin link senders.`);
 }
 
-async function checkAntilinkKick({ conn, m }) {
+async function checkAntilinkKick({ conn, m, waitForWarning }) {
   const jid = m?.key?.remoteJid;
   if (!jid?.endsWith('@g.us') || m.key.fromMe || !isAntilinkKickEnabled(jid)) return false;
 
@@ -87,6 +126,14 @@ async function checkAntilinkKick({ conn, m }) {
         participant: m.key.participant || m.participant,
       },
     });
+    await conn.sendMessage(jid, {
+      text: renderWarning(getWarningTemplate(jid), sender),
+      mentions: [sender],
+    });
+    const wait = typeof waitForWarning === 'function'
+      ? waitForWarning
+      : (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+    await wait(750);
     await conn.groupParticipantsUpdate(jid, [sender], 'remove');
     await conn.sendMessage(jid, {
       text: `⚠️ @${sender.split('@')[0]} was removed for posting a prohibited link.`,
@@ -103,5 +150,7 @@ module.exports = {
   configureAntilinkKick,
   checkAntilinkKick,
   isAntilinkKickEnabled,
+  getWarningTemplate,
+  renderWarning,
   textFromMessage,
 };

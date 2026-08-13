@@ -41,17 +41,30 @@ async function main() {
   assert.strictEqual(antilinkkick.isAntilinkKickEnabled(groupJid), true);
   assert.match(replies.at(-1), /ENABLED/);
 
+  await antilinkkick.configureAntilinkKick({
+    m: { key: { remoteJid: groupJid } },
+    args: ['warning', '🚫', '{user},', 'group', 'links', 'are', 'not', 'allowed.'],
+    reply: (text) => replies.push(text),
+    jid: groupJid,
+    isGroup: true,
+  });
+  assert.strictEqual(antilinkkick.getWarningTemplate(groupJid), '🚫 {user}, group links are not allowed.');
+  assert.match(replies.at(-1), /@user/);
+
   const enforced = await antilinkkick.checkAntilinkKick({
     conn,
     m: {
       key: { remoteJid: groupJid, participant: senderJid, id: 'link-message', fromMe: false },
       message: { conversation: 'Visit https://example.com' },
     },
+    waitForWarning: async () => {},
   });
   assert.strictEqual(enforced, true, 'A non-admin link sender must be removed when the control is enabled.');
   assert.deepStrictEqual(removals, [{ jid: groupJid, participants: [senderJid], action: 'remove' }]);
   assert.strictEqual(sent[0].payload.delete.id, 'link-message');
-  assert.match(sent[1].payload.text, /was removed/);
+  assert.match(sent[1].payload.text, /@254700000002, group links are not allowed/);
+  assert.deepStrictEqual(sent[1].payload.mentions, [senderJid]);
+  assert.match(sent[2].payload.text, /was removed/);
 
   const adminConn = {
     ...conn,
@@ -65,6 +78,7 @@ async function main() {
       key: { remoteJid: groupJid, participant: senderJid, id: 'admin-link', fromMe: false },
       message: { conversation: 'https://example.com' },
     },
+    waitForWarning: async () => {},
   });
   assert.strictEqual(preserved, false, 'Group admins must never be removed by automatic enforcement.');
 
@@ -72,6 +86,10 @@ async function main() {
     m: { key: { remoteJid: groupJid } }, args: ['off'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,
   });
   assert.strictEqual(antilinkkick.isAntilinkKickEnabled(groupJid), false);
+  await antilinkkick.configureAntilinkKick({
+    m: { key: { remoteJid: groupJid } }, args: ['warning', 'reset'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,
+  });
+  assert.strictEqual(antilinkkick.getWarningTemplate(groupJid), '⚠️ {user}, links are not allowed in this group. You will be removed now.');
   console.log('PASS: Restored V2.4 anti-link-kick protects enabled groups while preserving group-admin safeguards.');
 }
 
