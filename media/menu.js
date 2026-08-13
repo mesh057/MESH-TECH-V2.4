@@ -72,6 +72,7 @@ const WORKING_V24_GROUPS = [
   ['GROUP', '👥', [
     'kick @member', 'autogreet on|off', 'antilink on|off',
     'antilinkkick on|off|status', 'antilinkkick warning <message>',
+    'antilinkkick strikes 3|clear',
   ]],
 ];
 

@@ -24,6 +24,23 @@ const commandAliases = {
   viewstatus: "autostatus",
 };
 
+function normalizeJid(jid) {
+  return String(jid || '').replace(/:\d+(?=@)/, '');
+}
+
+async function isGroupAdmin(conn, groupJid, senderId) {
+  if (!groupJid?.endsWith('@g.us') || !senderId || typeof conn.groupMetadata !== 'function') return false;
+  try {
+    const metadata = await conn.groupMetadata(groupJid);
+    const sender = normalizeJid(senderId);
+    const participant = (metadata?.participants || []).find((item) => normalizeJid(item.id || item.jid) === sender);
+    return Boolean(participant && (participant.admin === 'admin' || participant.admin === 'superadmin' || participant.isAdmin));
+  } catch (error) {
+    console.error('❌ Unable to verify anti-link-kick group-admin permission:', error.message || error);
+    return false;
+  }
+}
+
 // Owner-only commands list
 const ownerOnlyCommands = [
   "video2", "song2", "kick", "add", "nice", "tagall",
@@ -123,12 +140,14 @@ async function handleCommand(conn, msg) {
     });
   }
 
+  const canManageAntilinkKick = command === 'antilinkkick' && isGroup && await isGroupAdmin(conn, chatId, senderId);
+
   // 🔸 Mode restrictions
-  if (global.mode === "self" && !isOwner && !["menu", "repo", "idcheck"].includes(command)) {
+  if (global.mode === "self" && !isOwner && !canManageAntilinkKick && !["menu", "repo", "idcheck"].includes(command)) {
     return;
   }
 
-  if (global.mode === "public" && ownerOnlyCommands.includes(command) && !isOwner) {
+  if (global.mode === "public" && ownerOnlyCommands.includes(command) && !isOwner && !canManageAntilinkKick) {
     return reply("💀 *OWNER ONLY COMMAND!* You ain't my master londey!");
   }
 
@@ -232,6 +251,7 @@ async function runCommand({
 ┃ Anti-delete (this chat): *${isAntideleteEnabled(chatId) ? "ON" : "OFF"}*
 ┃ Private forwarding: *${isPrivateForwardingEnabled() ? "ON" : "OFF"}*
 ┃ Anti-link kick (this group): *${isGroup && antilinkKickControl.isAntilinkKickEnabled(chatId) ? "ON" : "OFF"}*
+┃ Anti-link warnings before removal: *${isGroup ? antilinkKickControl.getStrikeLimit(chatId) : "—"}*
 ┃ Auto-react (messages): *${autoreactControl.isAutoreactEnabled() ? "ON" : "OFF"}*
 ┃ Status auto-react: *${statusReact.enabled ? "ON" : "OFF"}*
 ┃ Status emoji: ${statusReact.emoji}

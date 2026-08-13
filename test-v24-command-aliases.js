@@ -2,8 +2,10 @@
 
 const assert = require('assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
+process.env.MESH_ANTILINKKICK_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-antilinkkick-router-'));
 const menu = require('./media/menu');
 const { handleCommand } = require('./menu/case');
 
@@ -25,6 +27,14 @@ async function main() {
     },
     async relayMessage(jid, payload, options) {
       relayed.push({ jid, payload, options });
+    },
+    async groupMetadata(jid) {
+      return {
+        participants: [
+          { id: '254700000001@s.whatsapp.net', admin: 'admin' },
+          { id: '254700000002@s.whatsapp.net', admin: 'admin' },
+        ],
+      };
     },
   };
 
@@ -58,6 +68,18 @@ async function main() {
   assert.match(sent.at(-1).payload.text, /reply karo jis user ko kick karna hai/i,
     'The listed kick control must resolve through the V2.4 router in a group.');
 
+  await handleCommand(conn, {
+    key: {
+      remoteJid: 'v24-menu-test@g.us',
+      participant: '254700000002@s.whatsapp.net',
+      fromMe: false,
+      id: 'v24-antilink-strikes',
+    },
+    message: { conversation: '.antilinkkick strikes 3' },
+  });
+  assert.match(sent.at(-1).payload.text, /strike limit set to \*3\*/i,
+    'A group administrator must be able to configure the anti-link strike limit.');
+
   assert.match(menu.menu, /╔═❖•⊰ \*𝗖𝗢𝗠𝗠𝗔𝗡𝗗 𝗠𝗘𝗡𝗨\* ⊱•❖═╗/);
   assert.match(menu.menu, /╔═❖•⊰ 🪅 \*AUTOMATION MENU\* ⊱•❖═╗/);
   assert.match(menu.menu, /║➊ ⟿ \.autostatus on\|off/);
@@ -67,6 +89,7 @@ async function main() {
   assert.match(menu.menu, /║➋ ⟿ \.autogreet on\|off/);
   assert.match(menu.menu, /\.antilink on\|off/);
   assert.match(menu.menu, /\.antilinkkick on\|off\|status/);
+  assert.match(menu.menu, /\.antilinkkick strikes 3\|clear/);
   for (const commandFile of ['kick.js', 'autogreet.js', 'antilink.js', 'antilinkkick.js']) {
     assert.ok(fs.existsSync(path.join(__dirname, commandFile)), `${commandFile} must back its menu entry.`);
   }

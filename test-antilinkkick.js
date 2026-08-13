@@ -39,6 +39,7 @@ async function main() {
     m: { key: { remoteJid: groupJid } }, args: ['on'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,
   });
   assert.strictEqual(antilinkkick.isAntilinkKickEnabled(groupJid), true);
+  assert.strictEqual(antilinkkick.getStrikeLimit(groupJid), 3, 'The default removal policy must be three warnings.');
   assert.match(replies.at(-1), /ENABLED/);
 
   await antilinkkick.configureAntilinkKick({
@@ -51,20 +52,67 @@ async function main() {
   assert.strictEqual(antilinkkick.getWarningTemplate(groupJid), '🚫 {user}, group links are not allowed.');
   assert.match(replies.at(-1), /@user/);
 
-  const enforced = await antilinkkick.checkAntilinkKick({
+  const firstStrike = await antilinkkick.checkAntilinkKick({
     conn,
     m: {
-      key: { remoteJid: groupJid, participant: senderJid, id: 'link-message', fromMe: false },
+      key: { remoteJid: groupJid, participant: senderJid, id: 'link-message-one', fromMe: false },
       message: { conversation: 'Visit https://example.com' },
     },
     waitForWarning: async () => {},
   });
-  assert.strictEqual(enforced, true, 'A non-admin link sender must be removed when the control is enabled.');
-  assert.deepStrictEqual(removals, [{ jid: groupJid, participants: [senderJid], action: 'remove' }]);
-  assert.strictEqual(sent[0].payload.delete.id, 'link-message');
+  assert.strictEqual(firstStrike, true, 'The first prohibited link must be handled.');
+  assert.strictEqual(antilinkkick.getStrikeCount(groupJid, senderJid), 1);
+  assert.deepStrictEqual(removals, [], 'A member must not be removed on the first warning.');
+  assert.strictEqual(sent[0].payload.delete.id, 'link-message-one');
   assert.match(sent[1].payload.text, /@254700000002, group links are not allowed/);
+  assert.match(sent[1].payload.text, /Strike: \*1\/3\*/);
   assert.deepStrictEqual(sent[1].payload.mentions, [senderJid]);
-  assert.match(sent[2].payload.text, /was removed/);
+
+  await antilinkkick.checkAntilinkKick({
+    conn,
+    m: {
+      key: { remoteJid: groupJid, participant: senderJid, id: 'link-message-two', fromMe: false },
+      message: { conversation: 'https://example.com/two' },
+    },
+    waitForWarning: async () => {},
+  });
+  assert.strictEqual(antilinkkick.getStrikeCount(groupJid, senderJid), 2);
+  assert.deepStrictEqual(removals, [], 'A member must not be removed before the final configured warning.');
+  assert.match(sent[3].payload.text, /Strike: \*2\/3\*/);
+
+  const thirdStrike = await antilinkkick.checkAntilinkKick({
+    conn,
+    m: {
+      key: { remoteJid: groupJid, participant: senderJid, id: 'link-message-three', fromMe: false },
+      message: { conversation: 'https://example.com/three' },
+    },
+    waitForWarning: async () => {},
+  });
+  assert.strictEqual(thirdStrike, true, 'The final configured warning must trigger removal.');
+  assert.deepStrictEqual(removals, [{ jid: groupJid, participants: [senderJid], action: 'remove' }]);
+  assert.strictEqual(antilinkkick.getStrikeCount(groupJid, senderJid), 0, 'A removed member must not retain strikes.');
+  assert.match(sent[5].payload.text, /Strike: \*3\/3\*/);
+  assert.match(sent[6].payload.text, /3-strike anti-link limit/);
+
+  await antilinkkick.configureAntilinkKick({
+    m: { key: { remoteJid: groupJid } }, args: ['strikes', '2'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,
+  });
+  assert.strictEqual(antilinkkick.getStrikeLimit(groupJid), 2, 'An authorized administrator must be able to choose a group-specific limit.');
+  assert.match(replies.at(-1), /set to \*2\*/);
+
+  await antilinkkick.checkAntilinkKick({
+    conn,
+    m: {
+      key: { remoteJid: groupJid, participant: senderJid, id: 'link-message-clear', fromMe: false },
+      message: { conversation: 'https://example.com/clear' },
+    },
+    waitForWarning: async () => {},
+  });
+  assert.strictEqual(antilinkkick.getStrikeCount(groupJid, senderJid), 1);
+  await antilinkkick.configureAntilinkKick({
+    m: { key: { remoteJid: groupJid } }, args: ['strikes', 'clear'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,
+  });
+  assert.strictEqual(antilinkkick.getStrikeCount(groupJid, senderJid), 0, 'Group administrators must be able to clear saved strikes.');
 
   const adminConn = {
     ...conn,
@@ -89,8 +137,8 @@ async function main() {
   await antilinkkick.configureAntilinkKick({
     m: { key: { remoteJid: groupJid } }, args: ['warning', 'reset'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,
   });
-  assert.strictEqual(antilinkkick.getWarningTemplate(groupJid), '⚠️ {user}, links are not allowed in this group. You will be removed now.');
-  console.log('PASS: Restored V2.4 anti-link-kick protects enabled groups while preserving group-admin safeguards.');
+  assert.strictEqual(antilinkkick.getWarningTemplate(groupJid), '⚠️ {user}, links are not allowed in this group.');
+  console.log('PASS: Restored V2.4 anti-link-kick applies persistent warning strikes while preserving group-admin safeguards.');
 }
 
 main().catch((error) => {
