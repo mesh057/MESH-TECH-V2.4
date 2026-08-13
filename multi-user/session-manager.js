@@ -72,7 +72,12 @@ class MultiUserSessionManager {
       cwd: authDir,
       // Supply the selected user's number directly to the isolated bot. The
       // bot treats child-process stdin as non-interactive on Railway.
-      env: { ...process.env, MESH_PAIRING_PHONE_NUMBER: normalized },
+      env: {
+        ...process.env,
+        MESH_PAIRING_PHONE_NUMBER: normalized,
+        MESH_MULTI_USER_SESSION_OWNER: normalized,
+        MESH_MULTI_USER_SESSION_MODE: 'public',
+      },
       // The original bot keeps using auth_info; running it from this user’s
       // directory makes that relative path unique without editing its code.
       stdio: ['ignore', 'pipe', 'pipe'],

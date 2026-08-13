@@ -68,7 +68,9 @@ async function startBot() {
   const sock = makeWASocket({ version, auth: state, logger: P({ level: "fatal" }) });
 
   const settings = typeof loadSettings === 'function' ? loadSettings() : {};
-  let ownerRaw = settings.ownerNumber?.[0] || "92300xxxxxxx";
+  const multiUserOwner = normalizePhoneNumber(process.env.MESH_MULTI_USER_SESSION_OWNER);
+  const isMultiUserSession = Boolean(multiUserOwner);
+  let ownerRaw = multiUserOwner || settings.ownerNumber?.[0] || "92300xxxxxxx";
   const ownerJid = ownerRaw.includes("@s.whatsapp.net") ? ownerRaw : ownerRaw + "@s.whatsapp.net";
 
   global.sock = sock;
@@ -76,7 +78,12 @@ async function startBot() {
   global.signature = settings.signature || "> MESH TECH MD ✓";
   global.owner = ownerJid;
   global.ownerNumber = ownerRaw;
-  global.mode = getValue("meshBotMode") === "public" ? "public" : "self";
+  global.isMultiUserSession = isMultiUserSession;
+  // Each user who creates a session through the pairing page owns that session.
+  // Multi-user sessions start public so ordinary commands are usable immediately.
+  global.mode = isMultiUserSession
+    ? (process.env.MESH_MULTI_USER_SESSION_MODE === "self" ? "self" : "public")
+    : (getValue("meshBotMode") === "public" ? "public" : "self");
 
   // ✅ Flags
   global.antilink = {};
