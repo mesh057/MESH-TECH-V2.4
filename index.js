@@ -19,12 +19,14 @@ const { notifyBotEvent } = require("./multi-user/push-notifier");
 const { createV22CommandRuntime } = require("./multi-user/v22-command-runtime");
 const { connectedMessageEnabled, sendConnectedMessage } = require("./multi-user/connected-message");
 const { welcomeFirstInteraction } = require("./multi-user/first-interaction-welcome");
+const { CommandRateLimiter, commandSenderKey, formatCooldown } = require("./multi-user/command-rate-limiter");
 
 function normalizePhoneNumber(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const commandRateLimiter = new CommandRateLimiter();
 
 async function requestPairingCodeWithRetries(sock, phoneNumber) {
   let lastError = new Error("WhatsApp did not return a pairing code.");
@@ -148,7 +150,11 @@ async function startBot() {
     for (const msg of messages || []) {
       if (!msg?.key?.remoteJid || !msg?.message) continue;
     const jid = msg.key.remoteJid;
-    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+    const text = msg.message?.conversation
+      || msg.message?.extendedTextMessage?.text
+      || msg.message?.imageMessage?.caption
+      || msg.message?.videoMessage?.caption
+      || "";
 
     // ✅ AntiDelete
     if (settings.ANTIDELETE === true) {  
@@ -258,11 +264,20 @@ async function startBot() {
       }
     }
 
-    // ✅ Command handler
-    try {  
-      await handleCommand(sock, msg, {});  
-    } catch (err) {  
-      console.error("❌ Command error:", err.message || err);  
+    // ✅ Command handler with per-user sliding-window spam protection.
+    if (text.trim().startsWith('.')) {
+      const commandRate = commandRateLimiter.consume(commandSenderKey(msg));
+      if (!commandRate.allowed) {
+        if (commandRate.shouldNotify) {
+          await sock.sendMessage(jid, { text: formatCooldown(commandRate.retryAfterMs) }, { quoted: msg });
+        }
+      } else {
+        try {
+          await handleCommand(sock, msg, {});
+        } catch (err) {
+          console.error("❌ Command error:", err.message || err);
+        }
+      }
     }
 
     // ✅ MESH AI automatic direct-message replies

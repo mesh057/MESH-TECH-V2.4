@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node multi-user/server.js",
-    "test:ai": "node test-mesh-ai.js && node test-companion-service.js && node test-push-notifier.js && node test-history-client.js && node test-hosting-startup.js && node test-multi-user-hosting.js && node test-pairing-code-parser.js && node test-multi-user-command-mode.js && node test-session-restoration.js && node test-v22-command-runtime.js && node test-v22-command-dispatch.js && node test-v22-handler-integration.js && node test-v22-command-smoke.js && node test-alive-audio.js && node test-first-interaction-welcome.js && node test-command-reliability-repairs.js && node test-command-timeout.js && node test-connected-message.js",
+    "test:ai": "node test-mesh-ai.js && node test-companion-service.js && node test-push-notifier.js && node test-history-client.js && node test-hosting-startup.js && node test-multi-user-hosting.js && node test-pairing-code-parser.js && node test-multi-user-command-mode.js && node test-session-restoration.js && node test-v22-command-runtime.js && node test-v22-command-dispatch.js && node test-v22-handler-integration.js && node test-v22-command-smoke.js && node test-alive-audio.js && node test-first-interaction-welcome.js && node test-command-reliability-repairs.js && node test-command-timeout.js && node test-command-rate-limiter.js && node test-connected-message.js",
     "install:legacy": "npm install --legacy-peer-deps"
   },
   "author": "MESH TECH",

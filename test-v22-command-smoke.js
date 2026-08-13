@@ -8,7 +8,7 @@ process.env.MESH_MULTI_USER_SESSION_OWNER = '254700000001';
 const { createV22CommandRuntime } = require('./multi-user/v22-command-runtime');
 
 const commandDir = path.join(__dirname, 'v22-engine', 'commands');
-const externalOrPrivileged = /axios|fetch\(|https?\.|yt-search|googleapis|play-dl|ffmpeg|sharp|sticker|groupMetadata|groupParticipants|groupSetting|profilePicture|updateProfile|blockStatus|process\.exit|child_process|exec\(|spawn\(|eval\(|downloadMedia|writeFile|unlink|rmSync|mkdirSync|readFileSync/i;
+const externalOrPrivileged = /axios|fetch\(|https?\.|yt-search|footballData|googleapis|play-dl|ffmpeg|sharp|sticker|groupMetadata|groupParticipants|groupSetting|profilePicture|updateProfile|blockStatus|process\.exit|child_process|exec\(|spawn\(|eval\(|downloadMedia|writeFile|unlink|rmSync|mkdirSync|readFileSync/i;
 const excludedFiles = new Set(['builtins.js', 'commandControl.js', 'mode.js', 'public.js', 'self.js', 'restart.js', 'shell.js', 'eval.js']);
 
 function flatten(loaded) {
