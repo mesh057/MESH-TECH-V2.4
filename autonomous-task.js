@@ -44,7 +44,8 @@ async function handleAgent({ args = [], isOwner, reply }) {
     const enabled = setEnabled(action === 'on');
     return reply(`🧠 Autonomous task mode is now *${enabled ? 'ON ✅' : 'OFF ❌'}*. ${enabled ? 'New tasks require approval before execution.' : 'Existing tasks remain paused.'}`);
   }
-  return reply(`🧠 *Autonomous task mode:* ${isEnabled() ? 'ON ✅' : 'OFF ❌'}\nUse ".agent on" or ".agent off".\nRead-only research tasks always require approval before execution.`);
+  const searchReady = Boolean(meshAi.getMeshAiConfig?.().webSearch?.apiKey && meshAi.getMeshAiConfig?.().webSearch?.mode !== 'off');
+  return reply(`🧠 *Autonomous task mode:* ${isEnabled() ? 'ON ✅' : 'OFF ❌'}\n• Approved web search: ${searchReady ? 'available ✅' : 'not configured'}\nUse ".agent on" or ".agent off".\nRead-only research tasks always require approval before execution.`);
 }
 
 async function handleTask({ args = [], chatId, isOwner, reply }) {
@@ -99,9 +100,11 @@ async function handleTask({ args = [], chatId, isOwner, reply }) {
   if (!isEnabled()) return reply('⚠️ Autonomous task mode is OFF. The owner must use `.agent on` first.');
   const goal = args.join(' ').trim();
   if (goal.length < 8) return reply('Usage: `.task <goal>`\nExample: `.task compare the latest public information about renewable energy.`');
+  const searchReady = Boolean(meshAi.getMeshAiConfig?.().webSearch?.apiKey && meshAi.getMeshAiConfig?.().webSearch?.mode !== 'off');
   const task = {
     id: newId(),
     goal: goal.slice(0, 1000),
+    tool: searchReady ? 'web_search' : 'none',
     status: 'waiting_approval',
     createdAt: Date.now(),
     expiresAt: Date.now() + 10 * 60 * 1000,
@@ -109,7 +112,7 @@ async function handleTask({ args = [], chatId, isOwner, reply }) {
   tasks.push(task);
   state[chatId] = tasks.slice(-30);
   save();
-  return reply(`🧠 *TASK PLAN READY*\n┃ ID: *${task.id}*\n┃ Goal: ${task.goal}\n┃ Scope: read-only MESH AI research\n┃ Approval expires: 10 minutes\n\nUse ".task approve ${task.id}" to execute, or ".task deny ${task.id}" to reject. No execution has happened yet.`);
+  return reply(`🧠 *TASK PLAN READY*\n┃ ID: *${task.id}*\n┃ Goal: ${task.goal}\n┃ Scope: read-only MESH AI research${searchReady ? ' + approved public web search' : ''}\\n┃ Approval expires: 10 minutes\n\nUse ".task approve ${task.id}" to execute, or ".task deny ${task.id}" to reject. No execution has happened yet.`);
 }
 
 module.exports = { handleAgent, handleTask, isEnabled, setEnabled };
