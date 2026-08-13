@@ -281,6 +281,9 @@ async function startBot() {
       const code = await sock.requestPairingCode(phoneNumber);
       console.log("\n🔗 Pair this device using this code in WhatsApp:\n");
       console.log("   " + code + "\n");
+      // Machine-readable marker for the multi-user pairing server. Keep this
+      // separate from prose so normal words are never mistaken for a code.
+      console.log(`PAIRING_CODE ${code}`);
       console.log("Go to WhatsApp → Linked Devices → Link with code.");
     } catch (error) {
       console.error("❌ Could not request WhatsApp pairing code:", error.message || error);

@@ -5,6 +5,11 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
+function extractPairingCode(output) {
+  const match = String(output || '').match(/\bPAIRING_CODE\s+([A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8})?)\b/i);
+  return match ? match[1].toUpperCase() : null;
+}
+
 class MultiUserSessionManager {
   constructor(options = {}) {
     this.rootDir = path.resolve(options.rootDir || process.env.MULTI_USER_AUTH_DIR || 'auth_sessions');
@@ -53,6 +58,7 @@ class MultiUserSessionManager {
       code: null,
       startedAt: new Date().toISOString(),
       lastOutput: '',
+      outputBuffer: '',
       child: null,
     };
 
@@ -71,10 +77,10 @@ class MultiUserSessionManager {
     const consume = (chunk) => {
       const output = String(chunk);
       record.lastOutput = output.trim().slice(-2000);
-      const codeMatch = output.match(/PAIRING_CODE\s+([A-Z0-9-]+)/i)
-        || output.match(/(?:pairing code|Pair this device using this code)[^\n]*\n?\s*([A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8})?)/i);
-      if (codeMatch) {
-        record.code = codeMatch[1];
+      record.outputBuffer = `${record.outputBuffer}${output}`.slice(-5000);
+      const code = extractPairingCode(record.outputBuffer);
+      if (code) {
+        record.code = code;
         record.status = 'pairing_code_ready';
       }
       if (/BOT OWNER|Connected|connection open/i.test(output) && !record.code) record.status = 'running';
@@ -116,4 +122,4 @@ class MultiUserSessionManager {
   }
 }
 
-module.exports = { MultiUserSessionManager };
+module.exports = { MultiUserSessionManager, extractPairingCode };
