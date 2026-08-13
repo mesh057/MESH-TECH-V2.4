@@ -6,6 +6,7 @@ const path = require('path');
 const { MultiUserSessionManager } = require('./session-manager');
 const { askCompanion, clearCompanionHistory, getCompanionStatus, applyCompanionControl } = require('./companion-service');
 const { registerPushToken, pushStatus } = require('./push-notifier');
+const { verifyBridgeRequest } = require('./bridge-auth');
 
 const manager = new MultiUserSessionManager();
 const port = Number(process.env.MULTI_USER_PORT || process.env.PORT || 3000);
@@ -15,6 +16,19 @@ function companionAuthorized(req) {
   const configuredToken = String(process.env.MESH_COMPANION_CONTROL_TOKEN || '').trim();
   const supplied = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
   return Boolean(configuredToken) && supplied.length === configuredToken.length && require('crypto').timingSafeEqual(Buffer.from(supplied), Buffer.from(configuredToken));
+}
+
+function signedCompanionAuthorized(req, rawBody) {
+  const secret = String(process.env.MESH_COMPANION_CONTROL_TOKEN || '').trim();
+  return verifyBridgeRequest(secret, {
+    method: req.method,
+    path: new URL(req.url, `http://${req.headers.host || 'localhost'}`).pathname,
+    body: rawBody || '',
+    scope: String(req.headers['x-mesh-scope'] || ''),
+    timestamp: String(req.headers['x-mesh-timestamp'] || ''),
+    nonce: String(req.headers['x-mesh-nonce'] || ''),
+    signature: String(req.headers['x-mesh-signature'] || ''),
+  });
 }
 
 function uptimeRegistrationProof() {
@@ -38,10 +52,15 @@ function allowed(ip) {
   return item.count <= 10;
 }
 
-async function body(req, maxLength = 32_000) {
+async function readRawBody(req, maxLength = 32_000) {
   let raw = '';
   for await (const chunk of req) raw += chunk;
   if (raw.length > maxLength) throw new Error('Request body is too large.');
+  return raw;
+}
+
+async function body(req, maxLength = 32_000) {
+  const raw = await readRawBody(req, maxLength);
   return raw ? JSON.parse(raw) : {};
 }
 
@@ -56,14 +75,26 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && url.pathname === '/health') return json(res, 200, { ok: true, bot: 'MESH TECH MD', multiUser: true, active: manager.count() });
     if (url.pathname.startsWith('/api/companion/')) {
-      if (!companionAuthorized(req)) return json(res, 401, { ok: false, error: 'A valid owner control token is required.' });
+      const signedRequest = Boolean(req.headers['x-mesh-signature']);
+      let parsedBody = {};
+      let rawBody = '';
+      if (signedRequest && req.method !== 'GET') {
+        rawBody = await readRawBody(req);
+        parsedBody = rawBody ? JSON.parse(rawBody) : {};
+      }
+      const signed = signedRequest ? signedCompanionAuthorized(req, rawBody) : null;
+      if (signed?.ok) {
+        if (signed.scope !== (req.method === 'GET' ? 'status:read' : 'control:write')) return json(res, 403, { ok: false, error: 'Insufficient bridge scope.' });
+      } else if (!companionAuthorized(req)) {
+        return json(res, 401, { ok: false, error: signed?.error || 'A valid owner control token is required.' });
+      }
       if (req.method === 'GET' && url.pathname === '/api/companion/status') return json(res, 200, getCompanionStatus());
       if (req.method === 'POST' && url.pathname === '/api/companion/control') {
-        const data = await body(req);
+        const data = signedRequest ? parsedBody : await body(req);
         return json(res, 200, applyCompanionControl(String(data.action || '')));
       }
       if (req.method === 'POST' && url.pathname === '/api/companion/push-token') {
-        const data = await body(req);
+        const data = signedRequest ? parsedBody : await body(req);
         return json(res, 200, { ok: true, ...registerPushToken(data.token) });
       }
       if (req.method === 'GET' && url.pathname === '/api/companion/notifications') {
