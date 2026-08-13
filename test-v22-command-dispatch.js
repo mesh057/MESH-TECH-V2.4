@@ -36,8 +36,17 @@ async function main() {
     assert(sent.length >= 4, 'The full menu must send a selectable list and readable fallback catalog.');
     assert.match(sent.find((entry) => /𝗥𝗔𝗠: 128 GB/.test(entry.payload.text || ''))?.payload.text || '', /𝗥𝗔𝗠: 128 GB/);
 
+    const beforeHelp = sent.length;
     assert.deepStrictEqual(await runtime.execute('help', sock, msg, []), { handled: true });
-    assert.match(sent.at(-1).payload.text, /Available Commands/);
+    const helpMessages = sent.slice(beforeHelp).map((entry) => entry.payload.text || '');
+    const helpText = helpMessages.join('\n');
+    const canonicalCount = new Set([...runtime.commands.values()].map((command) => command.name.toLowerCase())).size;
+    assert(helpMessages.length > 1, 'The command guide should split long catalogs into readable WhatsApp messages.');
+    assert.match(helpText, /Available Commands/);
+    assert.match(helpText, new RegExp(`Loaded: ${canonicalCount}`));
+    assert.match(helpText, /\.ping — Shows bot response speed\./);
+    assert.match(helpText, /\.alive —/);
+    assert.doesNotMatch(helpText, /\.eval\b/);
 
     assert.deepStrictEqual(await runtime.execute('commandstatus', sock, msg, []), { handled: true });
     assert.match(sent.at(-1).payload.text, /Command status/);
