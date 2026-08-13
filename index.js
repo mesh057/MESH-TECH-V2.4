@@ -17,7 +17,7 @@ const meshAi = require("./ai");
 const { getValue } = require("./system/storage");
 const { notifyBotEvent } = require("./multi-user/push-notifier");
 const { createV22CommandRuntime } = require("./multi-user/v22-command-runtime");
-const { sendConnectedMessage } = require("./multi-user/connected-message");
+const { connectedMessageEnabled, sendConnectedMessage } = require("./multi-user/connected-message");
 
 function normalizePhoneNumber(value) {
   return String(value || "").replace(/\D/g, "");
@@ -118,7 +118,7 @@ async function startBot() {
     if (connection === "open") {  
       console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
       void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
-      if (!connectedMessageSent) {
+      if (!connectedMessageSent && connectedMessageEnabled()) {
         connectedMessageSent = true;
         try {
           await sendConnectedMessage(sock, {

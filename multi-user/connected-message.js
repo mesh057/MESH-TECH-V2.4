@@ -4,8 +4,12 @@ const fs = require('fs');
 const path = require('path');
 
 const officialGroupUrl = process.env.OFFICIAL_GROUP_INVITE || 'https://chat.whatsapp.com/DM1JxxnOJFp0vsTHpej89M';
-const officialChannelUrl = 'https://whatsapp.com/channel/0029VbDeTrNEKyZ9GlUude2R';
+const officialChannelUrl = process.env.OFFICIAL_CHANNEL_URL || 'https://whatsapp.com/channel/0029VbDeTrNEKyZ9GlUude2R';
 const logoPath = path.join(__dirname, '..', 'v22-engine', 'media', 'MESH.jpg');
+
+function connectedMessageEnabled() {
+  return String(process.env.MESH_CONNECTED_MESSAGE_ENABLED || 'true').trim().toLowerCase() !== 'false';
+}
 
 function ownJid(sock) {
   const raw = String(sock?.user?.id || '');
@@ -44,4 +48,4 @@ async function sendConnectedMessage(sock, { ownerNumber, commandCount }) {
   return sock.sendMessage(jid, payload, { mentions: [`${ownerNumber}@s.whatsapp.net`] });
 }
 
-module.exports = { connectedCaption, officialChannelUrl, officialGroupUrl, ownJid, sendConnectedMessage };
+module.exports = { connectedCaption, connectedMessageEnabled, officialChannelUrl, officialGroupUrl, ownJid, sendConnectedMessage };
