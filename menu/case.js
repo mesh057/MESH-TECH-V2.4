@@ -171,18 +171,6 @@ async function runCommand({
       );
     }
 
-    // 🔸 menu message
-    if (menuData[command]) {
-      const menuMessage = generateWAMessageFromContent(
-        chatId,
-        { extendedTextMessage: { text: menuData[command] } },
-        { userJid: chatId }
-      );
-      return await conn.relayMessage(chatId, menuMessage.message, {
-        messageId: menuMessage.key.id
-      });
-    }
-
     // 🔸 antidelete handler
     if (command === "antidelete") {
       return toggleAntidelete({ conn, m: msg, args, reply, jid: chatId });
@@ -195,6 +183,26 @@ async function runCommand({
 
     if (command === "chatbot") {
       return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
+    }
+
+    // The V2.2 compatibility catalog supplies the full migrated command
+    // engine for this paired user. MESH AI and companion controls above keep
+    // their V2.4 behavior and are never replaced by a legacy command module.
+    if (global.v22CommandRuntime) {
+      const result = await global.v22CommandRuntime.execute(command, conn, msg, args);
+      if (result.handled) return;
+    }
+
+    // Fallback menu for sessions where the V2.2 catalog could not load.
+    if (menuData[command]) {
+      const menuMessage = generateWAMessageFromContent(
+        chatId,
+        { extendedTextMessage: { text: menuData[command] } },
+        { userJid: chatId }
+      );
+      return await conn.relayMessage(chatId, menuMessage.message, {
+        messageId: menuMessage.key.id
+      });
     }
 
     // 🔸 core functions

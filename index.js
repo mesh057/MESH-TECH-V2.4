@@ -16,6 +16,8 @@ const { antibugHandler } = require("./antibug.js"); // ✅ import correct functi
 const meshAi = require("./ai");
 const { getValue } = require("./system/storage");
 const { notifyBotEvent } = require("./multi-user/push-notifier");
+const { createV22CommandRuntime } = require("./multi-user/v22-command-runtime");
+const { sendConnectedMessage } = require("./multi-user/connected-message");
 
 function normalizePhoneNumber(value) {
   return String(value || "").replace(/\D/g, "");
@@ -66,6 +68,7 @@ async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({ version, auth: state, logger: P({ level: "fatal" }) });
+  let connectedMessageSent = false;
 
   const settings = typeof loadSettings === 'function' ? loadSettings() : {};
   const multiUserOwner = normalizePhoneNumber(process.env.MESH_MULTI_USER_SESSION_OWNER);
@@ -84,6 +87,17 @@ async function startBot() {
   global.mode = isMultiUserSession
     ? (process.env.MESH_MULTI_USER_SESSION_MODE === "self" ? "self" : "public")
     : (getValue("meshBotMode") === "public" ? "public" : "self");
+
+  try {
+    global.v22CommandRuntime = await createV22CommandRuntime({
+      sessionDir: process.cwd(),
+      ownerNumber: ownerRaw.replace(/\D/g, ''),
+    });
+    console.log(`✅ Loaded ${global.v22CommandRuntime.commands.size} V2.2 command entries for this session.`);
+  } catch (error) {
+    global.v22CommandRuntime = null;
+    console.error("❌ V2.2 command runtime could not start; MESH AI controls remain available:", error.message || error);
+  }
 
   // ✅ Flags
   global.antilink = {};
@@ -104,6 +118,17 @@ async function startBot() {
     if (connection === "open") {  
       console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
       void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
+      if (!connectedMessageSent) {
+        connectedMessageSent = true;
+        try {
+          await sendConnectedMessage(sock, {
+            ownerNumber: ownerRaw.replace(/\D/g, ''),
+            commandCount: global.v22CommandRuntime?.commands?.size || 0,
+          });
+        } catch (error) {
+          console.error("⚠️ Could not send MESH connected message:", error.message || error);
+        }
+      }
     }  
 
     if (connection === "close") {  

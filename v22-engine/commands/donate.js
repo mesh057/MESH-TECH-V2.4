@@ -1,0 +1,43 @@
+module.exports = {
+  name: 'donate',
+  aliases: ['support', 'fund'],
+  description: 'Support the development of MESH-TECH BOT.',
+
+  async execute(sock, msg) {
+    const jid = msg.key.remoteJid;
+
+    const text = `
+╭━━〔 ❤️ SUPPORT MESH-TECH BOT 〕━━⬣
+
+Thank you for using *MESH-TECH BOT*!
+
+If you'd like to support the project and help keep it growing, you can donate using any of the methods below.
+
+🌍 Online Donations
+https://ko-fi.com/meshtech
+
+🇰🇪 M-Pesa
+📱 Number: 0746844168
+👤 Name: Message Mesh
+
+💡 Your support helps with:
+• Hosting and server costs
+• New commands and features
+• Bug fixes and maintenance
+• Keeping MESH-TECH BOT free for everyone
+
+🔗 GitHub
+https://github.com/mesh057/MESH-TECH-V2.2
+
+Thank you for supporting the project! 🚀
+
+╰━━━━━━━━━━━━━━⬣
+`.trim();
+
+    await sock.sendMessage(
+      jid,
+      { text },
+      { quoted: msg }
+    );
+  }
+};
