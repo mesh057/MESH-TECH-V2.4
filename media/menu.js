@@ -67,7 +67,7 @@ const WORKING_V24_GROUPS = [
   ]],
   ['PROTECTION', '🛡️', [
     'antidelete on|off|status', 'antideleteforward on|off|status',
-    'antilink on|off', 'antilinkick on|off', 'antibug on|off',
+    'antilink on|off', 'antilinkick on|off|status', 'antibug on|off|status',
   ]],
   ['GROUP', '👥', [
     'kick @member', 'autogreet on|off', 'antilink on|off',

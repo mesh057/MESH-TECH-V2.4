@@ -12,8 +12,8 @@ const { handleCommand } = require("./menu/case");
 const { loadSettings } = require("./settings");
 const { storeMessage, handleMessageRevocation, isAntideleteEnabled, setBotId } = require("./antidelete");
 const autoreactControl = require("./autoreact");
-const AntiLinkKick = require("./antilinkick.js");
-const { antibugHandler } = require("./antibug.js"); // ✅ import correct function
+const AntiLinkKick = require("./antilinkkick");
+const antiBug = require("./antibug");
 const meshAi = require("./ai");
 const { getValue } = require("./system/storage");
 const { notifyBotEvent } = require("./multi-user/push-notifier");
@@ -90,7 +90,6 @@ async function startBot() {
   // ✅ Flags
   global.antilink = {};
   global.antilinkick = {};
-  global.antibug = false;
   global.autogreet = {};
   global.autotyping = false;
   global.autoreact = autoreactControl.isAutoreactEnabled();
@@ -219,9 +218,9 @@ async function startBot() {
     }
 
     // ✅ AntiBug
-    if (global.antibug === true && !msg.key.fromMe) {
+    if (!msg.key.fromMe) {
       try {
-        const isBug = await antibugHandler({ conn: sock, m: msg }); // ✅ FIX
+        const isBug = await antiBug.antibugHandler({ conn: sock, m: msg });
         if (isBug) {
           
           return;

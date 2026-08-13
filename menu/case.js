@@ -140,7 +140,7 @@ async function handleCommand(conn, msg) {
     });
   }
 
-  const canManageAntilinkKick = command === 'antilinkkick' && isGroup && await isGroupAdmin(conn, chatId, senderId);
+  const canManageAntilinkKick = ['antilinkkick', 'antilinkick'].includes(command) && isGroup && await isGroupAdmin(conn, chatId, senderId);
 
   // 🔸 Mode restrictions
   if (global.mode === "self" && !isOwner && !canManageAntilinkKick && !["menu", "repo", "idcheck"].includes(command)) {
@@ -230,6 +230,14 @@ async function runCommand({
       return antilinkKickControl.configureAntilinkKick({ m: msg, args, reply, jid: chatId, isGroup });
     }
 
+    if (command === "antilinkick") {
+      return antilinkKickControl.configureAntilinkKick({ m: msg, args, reply, jid: chatId, isGroup });
+    }
+
+    if (command === "antibug") {
+      return require("../antibug").configureAntiBug({ args, reply, jid: chatId, isGroup });
+    }
+
     // 🔸 MESH AI
     if (command === "ai") {
       return meshAi.run({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
@@ -252,6 +260,7 @@ async function runCommand({
 ┃ Private forwarding: *${isPrivateForwardingEnabled() ? "ON" : "OFF"}*
 ┃ Anti-link kick (this group): *${isGroup && antilinkKickControl.isAntilinkKickEnabled(chatId) ? "ON" : "OFF"}*
 ┃ Anti-link warnings before removal: *${isGroup ? antilinkKickControl.getStrikeLimit(chatId) : "—"}*
+┃ Anti-bug (this group): *${isGroup && require("../antibug").isAntiBugEnabled(chatId) ? "ON" : "OFF"}*
 ┃ Auto-react (messages): *${autoreactControl.isAutoreactEnabled() ? "ON" : "OFF"}*
 ┃ Status auto-react: *${statusReact.enabled ? "ON" : "OFF"}*
 ┃ Status emoji: ${statusReact.emoji}
