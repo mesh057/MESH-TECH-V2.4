@@ -123,10 +123,7 @@ Copy the relevant settings from `.env.ai.example` into your hosting provider’s
 
 ### Railway multi-user deployment
 
-The default `npm start` command launches the public multi-user pairing page, not one fixed WhatsApp account. In Railway, create a Volume mounted at `/app/auth_sessions`, set `MULTI_USER_AUTH_DIR=/app/auth_sessions`, and deploy. Do **not** add `MESH_PAIRING_PHONE_NUMBER` for this multi-user setup. Open your Railway public domain in a browser, enter each user's international WhatsApp number on the pairing page, and use the returned one-time code in **WhatsApp → Linked devices → Link with phone
- number**. The browser pairing flow creates a separate authenticated session for every number; the Volume preserves those sessions through restarts and redeployments. Never publish pairing codes or the session directory in GitHub.
-
-When a user’s own session opens, the bot sends that account one MESH-branded connected message using the bundled `MESH.jpg` logo, the command count, the official group invite, and the official WhatsApp channel link. Set `OFFICIAL_GROUP_INVITE` or `OFFICIAL_CHANNEL_URL` in Railway Variables to replace the inherited V2.2 links. Set `MESH_CONNECTED_MESSAGE_ENABLED=false` to turn off only this welcome message; it never exposes pairing codes, session files, or AI credentials.
+The default `npm start` command launches the public multi-user pairing page, not one fixed WhatsApp account. In Railway, create a Volume mounted at `/app/auth_sessions`, set `MULTI_USER_AUTH_DIR=/app/auth_sessions`, and deploy. Do **not** add `MESH_PAIRING_PHONE_NUMBER` for this multi-user setup. Open your Railway public domain in a browser, enter each user's international WhatsApp number on the pairing page, and use the returned one-time code in **WhatsApp → Linked devices → Link with phone number**. The browser pairing flow creates a separate authenticated session for every number; the Volume preserves those sessions through restarts and redeployments. Never publish pairing codes or the session directory in GitHub.
 
 | Provider mode | Use when | Required settings |
 | --- | --- | --- |

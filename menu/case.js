@@ -21,12 +21,6 @@ const ownerOnlyCommands = [
   "promoteall", "demoteall", "say", "cpp", "harami", "ghostping",
   "adminkill", "delaymsg", "autorecording"
 ];
-const meshAiAliases = new Set([
-  'gemini', 'groq', 'gpt', 'worm', 'wormgpt', 'wgpt', 'dark', 'darkgpt',
-  'llama', 'mistral', 'deepseek', 'chatgpt', 'claude', 'gptdm', 'bing',
-]);
-const mediaDownloadAliases = new Set(['audio', 'download', 'play']);
-const unavailableLegacyCommands = new Set(['eplscorers', 'bundesligascorers']);
 
 // Load menu.js
 const menuData = {};
@@ -177,37 +171,7 @@ async function runCommand({
       );
     }
 
-    // 🔸 antidelete handler
-    if (command === "antidelete") {
-      return toggleAntidelete({ conn, m: msg, args, reply, jid: chatId });
-    }
-
-    // 🔸 MESH AI
-    if (command === "ai" || meshAiAliases.has(command)) {
-      return meshAi.run({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
-    }
-
-    if (command === "chatbot") {
-      return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
-    }
-
-    if (mediaDownloadAliases.has(command) && global.v22CommandRuntime?.commands?.has('play2')) {
-      return global.v22CommandRuntime.execute('play2', conn, msg, args);
-    }
-
-    if (unavailableLegacyCommands.has(command)) {
-      return reply(`⚙️ .${command} is temporarily disabled because its legacy statistics provider is offline. Use .news for current football updates.`);
-    }
-
-    // The V2.2 compatibility catalog supplies the full migrated command
-    // engine for this paired user. MESH AI and companion controls above keep
-    // their V2.4 behavior and are never replaced by a legacy command module.
-    if (global.v22CommandRuntime) {
-      const result = await global.v22CommandRuntime.execute(command, conn, msg, args);
-      if (result.handled) return;
-    }
-
-    // Fallback menu for sessions where the V2.2 catalog could not load.
+    // 🔸 menu message
     if (menuData[command]) {
       const menuMessage = generateWAMessageFromContent(
         chatId,
@@ -217,6 +181,20 @@ async function runCommand({
       return await conn.relayMessage(chatId, menuMessage.message, {
         messageId: menuMessage.key.id
       });
+    }
+
+    // 🔸 antidelete handler
+    if (command === "antidelete") {
+      return toggleAntidelete({ conn, m: msg, args, reply, jid: chatId });
+    }
+
+    // 🔸 MESH AI
+    if (command === "ai") {
+      return meshAi.run({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
+    }
+
+    if (command === "chatbot") {
+      return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
     }
 
     // 🔸 core functions

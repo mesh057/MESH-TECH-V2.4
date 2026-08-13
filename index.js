@@ -16,17 +16,12 @@ const { antibugHandler } = require("./antibug.js"); // ✅ import correct functi
 const meshAi = require("./ai");
 const { getValue } = require("./system/storage");
 const { notifyBotEvent } = require("./multi-user/push-notifier");
-const { createV22CommandRuntime } = require("./multi-user/v22-command-runtime");
-const { connectedMessageEnabled, sendConnectedMessage } = require("./multi-user/connected-message");
-const { welcomeFirstInteraction } = require("./multi-user/first-interaction-welcome");
-const { CommandRateLimiter, commandSenderKey, formatCooldown } = require("./multi-user/command-rate-limiter");
 
 function normalizePhoneNumber(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-const commandRateLimiter = new CommandRateLimiter();
 
 async function requestPairingCodeWithRetries(sock, phoneNumber) {
   let lastError = new Error("WhatsApp did not return a pairing code.");
@@ -71,7 +66,6 @@ async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({ version, auth: state, logger: P({ level: "fatal" }) });
-  let connectedMessageSent = false;
 
   const settings = typeof loadSettings === 'function' ? loadSettings() : {};
   const multiUserOwner = normalizePhoneNumber(process.env.MESH_MULTI_USER_SESSION_OWNER);
@@ -90,17 +84,6 @@ async function startBot() {
   global.mode = isMultiUserSession
     ? (process.env.MESH_MULTI_USER_SESSION_MODE === "self" ? "self" : "public")
     : (getValue("meshBotMode") === "public" ? "public" : "self");
-
-  try {
-    global.v22CommandRuntime = await createV22CommandRuntime({
-      sessionDir: process.cwd(),
-      ownerNumber: ownerRaw.replace(/\D/g, ''),
-    });
-    console.log(`✅ Loaded ${global.v22CommandRuntime.commands.size} V2.2 command entries for this session.`);
-  } catch (error) {
-    global.v22CommandRuntime = null;
-    console.error("❌ V2.2 command runtime could not start; MESH AI controls remain available:", error.message || error);
-  }
 
   // ✅ Flags
   global.antilink = {};
@@ -121,17 +104,6 @@ async function startBot() {
     if (connection === "open") {  
       console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
       void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
-      if (!connectedMessageSent && connectedMessageEnabled()) {
-        connectedMessageSent = true;
-        try {
-          await sendConnectedMessage(sock, {
-            ownerNumber: ownerRaw.replace(/\D/g, ''),
-            commandCount: global.v22CommandRuntime?.commands?.size || 0,
-          });
-        } catch (error) {
-          console.error("⚠️ Could not send MESH connected message:", error.message || error);
-        }
-      }
     }  
 
     if (connection === "close") {  
@@ -147,14 +119,9 @@ async function startBot() {
   });
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
-    for (const msg of messages || []) {
-      if (!msg?.key?.remoteJid || !msg?.message) continue;
+    const msg = messages[0];
     const jid = msg.key.remoteJid;
-    const text = msg.message?.conversation
-      || msg.message?.extendedTextMessage?.text
-      || msg.message?.imageMessage?.caption
-      || msg.message?.videoMessage?.caption
-      || "";
+    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
 
     // ✅ AntiDelete
     if (settings.ANTIDELETE === true) {  
@@ -162,7 +129,7 @@ async function startBot() {
         if (msg.message) storeMessage(msg);  
         if (msg.message?.protocolMessage?.type === 0) {  
           await handleMessageRevocation(sock, msg);  
-          continue;
+          return;  
         }  
       } catch (err) {  
         console.error("❌ AntiDelete Error:", err.message);  
@@ -206,7 +173,7 @@ async function startBot() {
       } catch (err) {  
         console.error("❌ AutoStatus View Error:", err.message);  
       }  
-      continue;
+      return;  
     }  
 
     // ✅ Antilink
@@ -246,38 +213,19 @@ async function startBot() {
       try {
         const isBug = await antibugHandler({ conn: sock, m: msg }); // ✅ FIX
         if (isBug) {
-          continue;
+          
+          return;
         }
       } catch (err) {
         console.error("❌ AntiBug Error:", err.message || err);
       }
     }
 
-    // ✅ First-contact onboarding for linked multi-user sessions.
-    // The per-session settings store remembers each direct-message contact,
-    // so the welcome and command guide are delivered only once per person.
-    if (global.isMultiUserSession && global.v22CommandRuntime) {
-      try {
-        await welcomeFirstInteraction({ runtime: global.v22CommandRuntime, sock, msg });
-      } catch (err) {
-        console.error("❌ First-interaction welcome error:", err.message || err);
-      }
-    }
-
-    // ✅ Command handler with per-user sliding-window spam protection.
-    if (text.trim().startsWith('.')) {
-      const commandRate = commandRateLimiter.consume(commandSenderKey(msg));
-      if (!commandRate.allowed) {
-        if (commandRate.shouldNotify) {
-          await sock.sendMessage(jid, { text: formatCooldown(commandRate.retryAfterMs) }, { quoted: msg });
-        }
-      } else {
-        try {
-          await handleCommand(sock, msg, {});
-        } catch (err) {
-          console.error("❌ Command error:", err.message || err);
-        }
-      }
+    // ✅ Command handler
+    try {  
+      await handleCommand(sock, msg, {});  
+    } catch (err) {  
+      console.error("❌ Command error:", err.message || err);  
     }
 
     // ✅ MESH AI automatic direct-message replies
@@ -296,7 +244,6 @@ async function startBot() {
       } catch (err) {
         console.error("❌ MESH AI automatic reply error:", err.message || err);
       }
-    }
     }
   });
 
