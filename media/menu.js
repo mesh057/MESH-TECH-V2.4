@@ -58,7 +58,7 @@ const MARKERS = ['➊', '➋', '➌', '➍', '➎', '➏', '➐', '➑', '➒', 
 
 const WORKING_V24_GROUPS = [
   ['GENERAL', '✨', ['menu', 'help', 'commands', 'idcheck', 'repo']],
-  ['AI', '🤖', ['ai <question>', 'mesh <question>', 'ask <question>', 'chatbot on|off|status']],
+  ['AI', '🤖', ['ai <question>', 'mesh <question>', 'ask <question>', 'chatbot on|off|status', 'agent on|off|status', 'task <goal>', 'task approve|deny|cancel <id>', 'tasks']],
   ['SYSTEM', '🌐', ['public', 'self', 'settings']],
   ['AUTOMATION', '🪅', [
     'autostatus on|off', 'autoviewstatus on|off', 'autoreactstatus on|off|status',

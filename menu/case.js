@@ -6,6 +6,7 @@ const { isAntideleteEnabled, isPrivateForwardingEnabled, toggleAntidelete, toggl
 const autoreactControl = require("../autoreact");
 const antilinkKickControl = require("../antilinkkick");
 const protectionLogControl = require("../protection-log");
+const autonomousTaskControl = require("../autonomous-task");
 const meshAi = require("../ai");
 const { setValue } = require("../system/storage");
 
@@ -52,7 +53,7 @@ const ownerOnlyCommands = [
   "leave", "open", "close", "tagadmin", "hidetag", "listactive",
   "changename", "closetime", "warn", "promote", "demote",
   "promoteall", "demoteall", "say", "cpp", "harami", "ghostping",
-  "adminkill", "delaymsg", "autorecording", "protectionlog"
+  "adminkill", "delaymsg", "autorecording", "protectionlog", "agent", "task", "tasks"
 ];
 
 // Load menu.js
@@ -242,6 +243,14 @@ async function runCommand({
 
     if (command === "protectionlog") {
       return protectionLogControl.configureProtectionLog({ args, reply, jid: chatId, isGroup });
+    }
+
+    if (command === "agent") {
+      return autonomousTaskControl.handleAgent({ args, isOwner, reply });
+    }
+
+    if (command === "task" || command === "tasks") {
+      return autonomousTaskControl.handleTask({ args: command === "tasks" ? ["list"] : args, chatId, isOwner, reply });
     }
 
     // 🔸 MESH AI
