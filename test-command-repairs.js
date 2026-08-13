@@ -15,6 +15,7 @@ const antiBug = require('./antibug');
 const groupJid = 'repair-test@g.us';
 const botJid = '254700000001@s.whatsapp.net';
 const memberJid = '254700000002@s.whatsapp.net';
+const adminJid = '254700000003@s.whatsapp.net';
 
 async function main() {
   const sent = [];
@@ -28,6 +29,7 @@ async function main() {
       return {
         participants: [
           { id: botJid, admin: 'admin' },
+          { id: adminJid, admin: 'admin' },
           { id: memberJid, admin: null },
         ],
       };
@@ -68,7 +70,8 @@ async function main() {
   };
   assert.strictEqual(await antiBug.antibugHandler({ conn, m: suspiciousMessage }), true, 'Suspicious oversized messages must be deleted.');
   assert.strictEqual(sent.at(-2).payload.delete.id, 'suspicious-message');
-  assert.match(sent.at(-1).payload.text, /Suspicious oversized/);
+  assert.match(sent.at(-1).payload.text, /ANTI-BUG MESSAGE REMOVAL/);
+  assert.deepStrictEqual(sent.at(-1).payload.mentions, [adminJid], 'Only verified non-bot group admins must receive the anti-bug incident log.');
 
   const adminConn = {
     ...conn,
@@ -76,6 +79,7 @@ async function main() {
       return {
         participants: [
           { id: botJid, admin: 'admin' },
+          { id: adminJid, admin: 'admin' },
           { id: memberJid, admin: 'admin' },
         ],
       };

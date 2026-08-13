@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { normalizeJid, isAdmin, notifyGroupAdmins } = require('./protection-log');
 
 const stateDir = path.resolve(process.env.MESH_ANTIBUG_STATE_DIR || process.cwd());
 const stateFile = path.join(stateDir, 'antibug.json');
@@ -20,10 +21,6 @@ try {
 
 function saveState() {
   fs.writeFileSync(stateFile, JSON.stringify(enabledGroups, null, 2));
-}
-
-function normalizeJid(jid) {
-  return String(jid || '').replace(/:\d+(?=@)/, '');
 }
 
 function isAntiBugEnabled(jid) {
@@ -46,10 +43,6 @@ function isSuspiciousMessage(m) {
   return text.length > maxTextLength ||
     serialized.length > maxPayloadLength ||
     invisibleCount > maxInvisibleCharacters;
-}
-
-function isAdmin(participant) {
-  return Boolean(participant && (participant.admin === 'admin' || participant.admin === 'superadmin' || participant.isAdmin));
 }
 
 async function configureAntiBug({ args, reply, jid, isGroup }) {
@@ -95,8 +88,12 @@ async function antibugHandler({ conn, m }) {
         participant: m.key.participant || m.participant,
       },
     });
-    await conn.sendMessage(jid, {
-      text: '🛡️ Suspicious oversized or invisible-character message removed by anti-bug protection.',
+    await notifyGroupAdmins({
+      conn,
+      jid,
+      metadata,
+      event: 'ANTI-BUG MESSAGE REMOVAL',
+      details: `Action: Suspicious oversized or invisible-character message from +${sender.split('@')[0]} was removed.`,
     });
     return true;
   } catch (error) {

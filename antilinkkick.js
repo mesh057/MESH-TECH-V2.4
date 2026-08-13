@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { normalizeJid, isAdmin, notifyGroupAdmins } = require('./protection-log');
 
 const stateDir = path.resolve(process.env.MESH_ANTILINKKICK_STATE_DIR || process.cwd());
 const stateFile = path.join(stateDir, 'antilinkkick.json');
@@ -23,10 +24,6 @@ try {
 
 function saveState() {
   fs.writeFileSync(stateFile, JSON.stringify(enabledChats, null, 2));
-}
-
-function normalizeJid(jid) {
-  return String(jid || '').replace(/:\d+(?=@)/, '');
 }
 
 function isAntilinkKickEnabled(jid) {
@@ -186,8 +183,6 @@ async function checkAntilinkKick({ conn, m, waitForWarning }) {
     const senderParticipant = participants.find((participant) => normalizeJid(participant.id || participant.jid) === sender);
     const botJid = normalizeJid(conn.user?.id || conn.user?.jid);
     const botParticipant = participants.find((participant) => normalizeJid(participant.id || participant.jid) === botJid);
-    const isAdmin = (participant) => Boolean(participant && (participant.admin === 'admin' || participant.admin === 'superadmin' || participant.isAdmin));
-
     // Do not remove group admins or attempt an action the bot is not allowed to perform.
     if (isAdmin(senderParticipant) || !isAdmin(botParticipant)) return false;
 
@@ -217,6 +212,13 @@ async function checkAntilinkKick({ conn, m, waitForWarning }) {
     await conn.sendMessage(jid, {
       text: `⚠️ @${sender.split('@')[0]} was removed after reaching the ${strikeLimit}-strike anti-link limit.`,
       mentions: [sender],
+    });
+    await notifyGroupAdmins({
+      conn,
+      jid,
+      metadata,
+      event: 'ANTI-LINK-KICK REMOVAL',
+      details: `Action: Non-admin member +${sender.split('@')[0]} removed after *${strikeCount}/${strikeLimit}* prohibited-link strikes.`,
     });
     return true;
   } catch (error) {

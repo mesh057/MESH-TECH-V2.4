@@ -12,6 +12,7 @@ const antilinkkick = require('./antilinkkick');
 const groupJid = 'antilinkkick-test@g.us';
 const senderJid = '254700000002@s.whatsapp.net';
 const botJid = '254700000001@s.whatsapp.net';
+const adminJid = '254700000003@s.whatsapp.net';
 
 async function main() {
   const replies = [];
@@ -23,6 +24,7 @@ async function main() {
       return {
         participants: [
           { id: botJid, admin: 'admin' },
+          { id: adminJid, admin: 'admin' },
           { id: senderJid, admin: null },
         ],
       };
@@ -93,6 +95,8 @@ async function main() {
   assert.strictEqual(antilinkkick.getStrikeCount(groupJid, senderJid), 0, 'A removed member must not retain strikes.');
   assert.match(sent[5].payload.text, /Strike: \*3\/3\*/);
   assert.match(sent[6].payload.text, /3-strike anti-link limit/);
+  assert.match(sent[7].payload.text, /ANTI-LINK-KICK REMOVAL/);
+  assert.deepStrictEqual(sent[7].payload.mentions, [adminJid], 'Only verified non-bot group admins must receive the incident log.');
 
   await antilinkkick.configureAntilinkKick({
     m: { key: { remoteJid: groupJid } }, args: ['strikes', '2'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,
@@ -117,7 +121,7 @@ async function main() {
   const adminConn = {
     ...conn,
     async groupMetadata() {
-      return { participants: [{ id: botJid, admin: 'admin' }, { id: senderJid, admin: 'admin' }] };
+      return { participants: [{ id: botJid, admin: 'admin' }, { id: adminJid, admin: 'admin' }, { id: senderJid, admin: 'admin' }] };
     },
   };
   const preserved = await antilinkkick.checkAntilinkKick({
