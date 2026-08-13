@@ -145,7 +145,8 @@ async function startBot() {
   });
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
-    const msg = messages[0];
+    for (const msg of messages || []) {
+      if (!msg?.key?.remoteJid || !msg?.message) continue;
     const jid = msg.key.remoteJid;
     const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
 
@@ -155,7 +156,7 @@ async function startBot() {
         if (msg.message) storeMessage(msg);  
         if (msg.message?.protocolMessage?.type === 0) {  
           await handleMessageRevocation(sock, msg);  
-          return;  
+          continue;
         }  
       } catch (err) {  
         console.error("❌ AntiDelete Error:", err.message);  
@@ -199,7 +200,7 @@ async function startBot() {
       } catch (err) {  
         console.error("❌ AutoStatus View Error:", err.message);  
       }  
-      return;  
+      continue;
     }  
 
     // ✅ Antilink
@@ -239,8 +240,7 @@ async function startBot() {
       try {
         const isBug = await antibugHandler({ conn: sock, m: msg }); // ✅ FIX
         if (isBug) {
-          
-          return;
+          continue;
         }
       } catch (err) {
         console.error("❌ AntiBug Error:", err.message || err);
@@ -281,6 +281,7 @@ async function startBot() {
       } catch (err) {
         console.error("❌ MESH AI automatic reply error:", err.message || err);
       }
+    }
     }
   });
 

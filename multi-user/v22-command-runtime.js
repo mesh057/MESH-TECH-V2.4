@@ -6,10 +6,33 @@ const engineRoot = path.join(__dirname, '..', 'v22-engine');
 const blockedCommands = new Set([
   'eval', 'shell', 'compile-c', 'compile-cpp', 'compile-js', 'compile-py',
   'getfile', 'getcmd', 'bottools', 'update', 'clearcache', 'gpass', 'restart',
+  'backup', 'updatenow', 'shutdown',
 ]);
 const catalogArgumentCommands = new Set([
   'help', 'enable', 'disable', 'commandstatus', 'cmdon', 'cmdoff', 'cmdstatus',
 ]);
+const DEFAULT_COMMAND_TIMEOUT_MS = 45_000;
+
+function commandTimeoutMs() {
+  const configured = Number.parseInt(process.env.MESH_COMMAND_TIMEOUT_MS || '', 10);
+  return Number.isFinite(configured) && configured >= 1_000 && configured <= 120_000
+    ? configured
+    : DEFAULT_COMMAND_TIMEOUT_MS;
+}
+
+async function runWithinTimeout(promise, commandName) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${commandName} timed out while waiting for its provider.`)), commandTimeoutMs());
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function sessionLogger(ownerNumber) {
   const prefix = `[v22-runtime:${ownerNumber}]`;
@@ -68,7 +91,10 @@ async function createV22CommandRuntime({ sessionDir, ownerNumber }) {
         ? commands
         : resources;
       try {
-        await runWithContext(resources, () => command.execute(sock, msg, args, fourthArgument));
+        await runWithinTimeout(
+          runWithContext(resources, () => command.execute(sock, msg, args, fourthArgument)),
+          String(commandName || command.name || 'command'),
+        );
       } catch (error) {
         resources.logger.error(`Command .${commandName} failed:`, error?.stack || error?.message || error);
         await sock.sendMessage(msg.key.remoteJid, {
@@ -80,4 +106,4 @@ async function createV22CommandRuntime({ sessionDir, ownerNumber }) {
   };
 }
 
-module.exports = { blockedCommands, catalogArgumentCommands, createV22CommandRuntime };
+module.exports = { blockedCommands, catalogArgumentCommands, commandTimeoutMs, createV22CommandRuntime };

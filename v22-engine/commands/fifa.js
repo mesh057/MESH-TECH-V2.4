@@ -1,33 +1,11 @@
-const axios = require("axios");
-const { KEITH_BASE } = require('../config/apis');
+'use strict';
 
-module.exports = {
-  name: "fifa",
-  description: "Shows current FIFA World Cup standings/groups.",
-  async execute(sock, msg) {
-    const jid = msg.key.remoteJid;
-    const loading = await sock.sendMessage(jid, { text: "🏆 Fetching FIFA standings..." }, { quoted: msg });
+const { createStandingsCommand } = require('../utils/footballData');
 
-    try {
-      const { data } = await axios.get(`${KEITH_BASE}/fifa/standings`);
-      if (!data.status || !data.result?.standings) throw new Error("No standings available.");
-
-      const standings = data.result.standings;
-      let text = `🏆 *${data.result.competition || 'FIFA World Cup'}*\n`;
-      text += "```\nPos Team               P  GD Pts\n───────────────────────────────\n";
-      standings.forEach((team) => {
-        const pos = String(team.position).padEnd(3);
-        const name = team.team.slice(0, 18).padEnd(18);
-        const played = String(team.played).padEnd(3);
-        const gd = String(team.goalDifference >= 0 ? "+" + team.goalDifference : team.goalDifference).padEnd(4);
-        const pts = String(team.points).padStart(3);
-        text += `${pos}${name}${played}${gd}${pts}\n`;
-      });
-      text += "```";
-
-      await sock.sendMessage(jid, { text, edit: loading.key });
-    } catch (err) {
-      await sock.sendMessage(jid, { text: `❌ Failed to fetch FIFA standings.\n\n${err.message}`, edit: loading.key });
-    }
-  },
-};
+module.exports = createStandingsCommand({
+  name: 'fifa',
+  description: 'Shows current FIFA World Cup standings and groups.',
+  league: 'fifa.world',
+  label: 'FIFA World Cup',
+  loadingText: '🏆 Fetching FIFA standings...',
+});

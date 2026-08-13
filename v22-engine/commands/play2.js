@@ -1,6 +1,5 @@
 const axios = require('axios');
-const { KEITH_BASE } = require('../config/apis');
-const API = KEITH_BASE;
+const yts = require('yt-search');
 
 module.exports = {
   name: 'play2',
@@ -23,13 +22,13 @@ module.exports = {
         videoUrl = text;
         videoTitle = 'YouTube Audio';
       } else {
-        const search = await axios.get(`${API}/search/yts?query=${encodeURIComponent(text)}`);
-        const videos = search.data?.result;
-        if (!Array.isArray(videos) || videos.length === 0) {
+        const search = await yts(text);
+        const video = search?.videos?.[0];
+        if (!video?.url) {
           return sock.sendMessage(jid, { text: `❌ No results found for: *${text}*`, edit: searching.key });
         }
-        videoUrl = videos[0].url;
-        videoTitle = videos[0].title;
+        videoUrl = video.url;
+        videoTitle = video.title || 'YouTube Audio';
       }
 
       await sock.sendMessage(jid, { text: `😍 Found: *${videoTitle}*\n⏳ Downloading...`, edit: searching.key });

@@ -21,6 +21,12 @@ const ownerOnlyCommands = [
   "promoteall", "demoteall", "say", "cpp", "harami", "ghostping",
   "adminkill", "delaymsg", "autorecording"
 ];
+const meshAiAliases = new Set([
+  'gemini', 'groq', 'gpt', 'worm', 'wormgpt', 'wgpt', 'dark', 'darkgpt',
+  'llama', 'mistral', 'deepseek', 'chatgpt', 'claude', 'gptdm', 'bing',
+]);
+const mediaDownloadAliases = new Set(['audio', 'download', 'play']);
+const unavailableLegacyCommands = new Set(['eplscorers', 'bundesligascorers']);
 
 // Load menu.js
 const menuData = {};
@@ -177,12 +183,20 @@ async function runCommand({
     }
 
     // 🔸 MESH AI
-    if (command === "ai") {
+    if (command === "ai" || meshAiAliases.has(command)) {
       return meshAi.run({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
     }
 
     if (command === "chatbot") {
       return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
+    }
+
+    if (mediaDownloadAliases.has(command) && global.v22CommandRuntime?.commands?.has('play2')) {
+      return global.v22CommandRuntime.execute('play2', conn, msg, args);
+    }
+
+    if (unavailableLegacyCommands.has(command)) {
+      return reply(`⚙️ .${command} is temporarily disabled because its legacy statistics provider is offline. Use .news for current football updates.`);
     }
 
     // The V2.2 compatibility catalog supplies the full migrated command

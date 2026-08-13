@@ -8,14 +8,18 @@ const path = require('path');
 const os = require('os');
 const axios = require('axios');
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+const config = require('../config/config');
 
 function isOwner(msg, config) {
   const sender = msg.key.participant || msg.key.remoteJid;
   return sender === `${config.ownerNumber}@s.whatsapp.net` || msg.key.fromMe;
 }
 
-function ownerGuard(sock, jid, msg, config, cb) {
-  if (!isOwner(msg, config)) {
+function ownerGuard(sock, jid, msg, configOrCallback, callback) {
+  const activeConfig = typeof configOrCallback === 'function' ? config : configOrCallback;
+  const cb = typeof configOrCallback === 'function' ? configOrCallback : callback;
+  if (typeof cb !== 'function') throw new Error('Owner command callback is required.');
+  if (!isOwner(msg, activeConfig)) {
     return sock.sendMessage(jid, { text: '❌ *Owner only.* This command is restricted to the bot owner.' }, { quoted: msg });
   }
   return cb();
@@ -144,7 +148,7 @@ module.exports = [
     name: 'checkme',
     description: 'Check if you are registered/allowed to use the bot and your role.',
     category: 'TOOLS',
-    async execute(sock, msg, config) {
+    async execute(sock, msg) {
       const jid = msg.key.remoteJid;
       const sender = msg.key.participant || msg.key.remoteJid;
       const owner = isOwner(msg, config);
@@ -194,7 +198,7 @@ module.exports = [
     name: 'intro',
     description: 'Show an introduction about the bot.',
     category: 'FUN',
-    async execute(sock, msg, config) {
+    async execute(sock, msg) {
       const jid = msg.key.remoteJid;
       await sock.sendMessage(jid, { text: `🌟 *𝗠𝗘𝗦𝗛-𝗧𝗘𝗖𝗛 𝗠𝗗* — Introduction\n\nI am *${config.botName}*, a multipurpose WhatsApp bot built by *𝕄𝔼𝕊ℍ*.\n\nI can manage groups, download media, generate AI responses, play games, and much more.\n\n👑 Owner: @${config.ownerNumber}\n💬 Prefix: \`${config.prefix}\`\n🌐 GitHub: https://github.com/mesh057/MESH-TECH-V2.2\n\nUse \`${config.prefix}menu\` to see everything I can do!` }, { quoted: msg });
     },
