@@ -1,4 +1,5 @@
 'use strict';
+const { getContext } = require('./context');
 
 class CommandToggle {
     constructor(settingsStore) {
@@ -41,3 +42,11 @@ class CommandToggle {
 }
 
 module.exports = CommandToggle;
+const fallbackNormalizer = (value) => String(value || '').trim().replace(/^[.!#/]+/, '').toLowerCase();
+const activeToggle = () => getContext()?.commandToggle || global.mainCommandToggle || null;
+Object.assign(module.exports, {
+    normalizeCommandName: (value) => activeToggle()?.normalizeCommandName(value) || fallbackNormalizer(value),
+    isDisabled: (name) => activeToggle()?.isDisabled(name) || false,
+    setDisabled: (name, disabled) => activeToggle()?.setDisabled(name, disabled) || false,
+    listDisabled: () => activeToggle()?.listDisabled() || [],
+});

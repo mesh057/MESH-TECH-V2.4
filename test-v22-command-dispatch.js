@@ -35,6 +35,16 @@ async function main() {
     assert.deepStrictEqual(await runtime.execute('menu', sock, msg, []), { handled: true });
     assert(sent.length >= 4, 'The full menu must send a selectable list and readable fallback catalog.');
 
+    assert.deepStrictEqual(await runtime.execute('help', sock, msg, []), { handled: true });
+    assert.match(sent.at(-1).payload.text, /Available Commands/);
+
+    assert.deepStrictEqual(await runtime.execute('commandstatus', sock, msg, []), { handled: true });
+    assert.match(sent.at(-1).payload.text, /Command status/);
+
+    runtime.commands.set('brokenfixture', { name: 'brokenfixture', execute: async () => { throw new Error('fixture failure'); } });
+    assert.deepStrictEqual(await runtime.execute('brokenfixture', sock, msg, []), { handled: true });
+    assert.match(sent.at(-1).payload.text, /could not complete right now/);
+
     assert.deepStrictEqual(await runtime.execute('alive', sock, msg, []), { handled: true });
     assert.match(sent.at(-1).payload.text, /I'M ALIVE MATE/);
     console.log('PASS: V2.2 runtime dispatches public, owner, and menu commands inside an isolated session.');

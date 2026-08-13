@@ -7,6 +7,9 @@ const blockedCommands = new Set([
   'eval', 'shell', 'compile-c', 'compile-cpp', 'compile-js', 'compile-py',
   'getfile', 'getcmd', 'bottools', 'update', 'clearcache', 'gpass', 'restart',
 ]);
+const catalogArgumentCommands = new Set([
+  'help', 'enable', 'disable', 'commandstatus', 'cmdon', 'cmdoff', 'cmdstatus',
+]);
 
 function sessionLogger(ownerNumber) {
   const prefix = `[v22-runtime:${ownerNumber}]`;
@@ -60,10 +63,21 @@ async function createV22CommandRuntime({ sessionDir, ownerNumber }) {
         await sock.sendMessage(msg.key.remoteJid, { text: `❌ Command *${commandName}* is currently disabled.` }, { quoted: msg });
         return { handled: true };
       }
-      await runWithContext(resources, () => command.execute(sock, msg, args, resources));
+      const fourthArgument = catalogArgumentCommands.has(String(commandName || '').toLowerCase())
+        || catalogArgumentCommands.has(String(command.name || '').toLowerCase())
+        ? commands
+        : resources;
+      try {
+        await runWithContext(resources, () => command.execute(sock, msg, args, fourthArgument));
+      } catch (error) {
+        resources.logger.error(`Command .${commandName} failed:`, error?.stack || error?.message || error);
+        await sock.sendMessage(msg.key.remoteJid, {
+          text: `❌ *${commandName}* could not complete right now. If this command uses an online service, its provider may be unavailable. Please try again shortly.`,
+        }, { quoted: msg });
+      }
       return { handled: true };
     },
   };
 }
 
-module.exports = { blockedCommands, createV22CommandRuntime };
+module.exports = { blockedCommands, catalogArgumentCommands, createV22CommandRuntime };
