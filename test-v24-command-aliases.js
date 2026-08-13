@@ -39,12 +39,16 @@ async function main() {
   assert.match(sent.at(-1).payload.text, /DISABLED/);
 
   await handleCommand(conn, message('.help'));
-  assert.strictEqual(relayed.length, 1, 'The help alias must deliver the accurate V2.4 menu.');
+  assert.strictEqual(relayed.length, 1, 'The help alias must deliver the V2.2-style V2.4 menu.');
 
+  assert.match(menu.menu, /╔═❖•⊰ \*𝗖𝗢𝗠𝗠𝗔𝗡𝗗 𝗠𝗘𝗡𝗨\* ⊱•❖═╗/);
+  assert.match(menu.menu, /╔═❖•⊰ 🪅 \*AUTOMATION MENU\* ⊱•❖═╗/);
+  assert.match(menu.menu, /║➊ ⟿ \.autostatus on\|off/);
   assert.match(menu.menu, /\.autoviewstatus on\|off/);
-  assert.match(menu.menu, /only the restored handlers currently included/);
-  assert.doesNotMatch(menu.menu, /222\+|TAYYAB|HELL-MD/);
-  console.log('PASS: Lean V2.4 aliases resolve to restored handlers and the menu advertises only supported commands.');
+  assert.match(menu.menu, /\.antideleteforward on\|off\|status/);
+  assert.match(menu.menu, /\.autoreactstatus emoji 💜/);
+  assert.doesNotMatch(menu.menu, /222\+|HELL-MD/);
+  console.log('PASS: V2.2 menu styling is retained while the drop-down lists only restored V2.4 commands.');
 }
 
 main().catch((error) => {
