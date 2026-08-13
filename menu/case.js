@@ -2,7 +2,8 @@
 const fs = require("fs");
 const path = require("path");
 const { generateWAMessageFromContent } = require("@whiskeysockets/baileys");
-const { toggleAntidelete } = require("../antidelete");
+const { isAntideleteEnabled, toggleAntidelete } = require("../antidelete");
+const autoreactControl = require("../autoreact");
 const meshAi = require("../ai");
 const { setValue } = require("../system/storage");
 
@@ -13,7 +14,6 @@ const commandAliases = {
   ask: "ai",
   autoview: "autostatus",
   autoviewstatus: "autostatus",
-  autoreactstatus: "autoreact",
   commands: "menu",
   command: "menu",
   help: "menu",
@@ -25,7 +25,7 @@ const commandAliases = {
 // Owner-only commands list
 const ownerOnlyCommands = [
   "video2", "song2", "kick", "add", "nice", "tagall",
-  "antilink", "antilinkick", "autostatus", "autoreact",
+  "antilink", "antilinkick", "autostatus", "autoreact", "autoreactstatus", "settings",
   "autogreet", "autotyping", "autoread", "block", "unblock",
   "shutdown", "restart", "setbio", "setname", "setpp", "save",
   "join", "delaymsg", "del", "reactch", "kickall", "antibug",
@@ -208,6 +208,24 @@ async function runCommand({
 
     if (command === "chatbot") {
       return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
+    }
+
+    if (command === "autoreactstatus") {
+      return autoreactControl.configureStatusReaction({ args, reply });
+    }
+
+    if (command === "settings") {
+      const statusReact = autoreactControl.getStatusReactionState();
+      return reply(
+`╭━━━〔 *⚙️ MESH V2.4 SETTINGS* 〕━━━╮
+┃ Mode: *${global.mode || "public"}*
+┃ Anti-delete (this chat): *${isAntideleteEnabled(chatId) ? "ON" : "OFF"}*
+┃ Auto-react (messages): *${autoreactControl.isAutoreactEnabled() ? "ON" : "OFF"}*
+┃ Status auto-react: *${statusReact.enabled ? "ON" : "OFF"}*
+┃ Status emoji: ${statusReact.emoji}
+┃ Auto-status view: *${global.autostatus ? "ON" : "OFF"}*
+╰━━━━━━━━━━━━━━━━━━━━━━╯`
+      );
     }
 
     // 🔸 core functions

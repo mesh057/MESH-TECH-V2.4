@@ -18,12 +18,14 @@ const commandGuide = `${header}
 • \`.mesh <question>\` or \`.ask <question>\` — MESH AI aliases
 • \`.ai status\` — check AI configuration
 • \`.chatbot on|off|status\` — owner controls for automatic DM replies
+• \`.settings\` — owner-only configuration status
 
 *AUTOMATION — OWNER ONLY*
 • \`.autostatus on|off\` — auto-view WhatsApp statuses
 • \`.autoviewstatus on|off\` — compatible name for \`.autostatus\`
-• \`.autoreact on|off|status\` — automatic reactions
-• \`.autoreactstatus on|off|status\` — compatible auto-reaction command
+• \`.autoreact on|off|status\` — react to ordinary messages
+• \`.autoreactstatus on|off|status\` — react to WhatsApp statuses
+• \`.autoreactstatus emoji 💜\` — choose the status-reaction emoji
 • \`.autoread on|off\` — automatic message reads
 • \`.autorecording on|off\` — show or hide recording presence
 • \`.autogreet on|off\` — group join/leave greetings
@@ -38,7 +40,9 @@ const automationGuide = `${header}
 
 *AUTOMATION COMMANDS*
 • \`.autostatus on|off\` (also \`.autoviewstatus\`)
-• \`.autoreact on|off|status\` (also \`.autoreactstatus\`)
+• \`.autoreact on|off|status\` — ordinary message reactions
+• \`.autoreactstatus on|off|status\` — WhatsApp status reactions
+• \`.autoreactstatus emoji 💜\` — choose the status-reaction emoji
 • \`.autoread on|off\`
 • \`.autorecording on|off\`
 • \`.autogreet on|off\` (group only)

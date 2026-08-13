@@ -162,6 +162,16 @@ async function startBot() {
     }  
 
     // ✅ AutoStatus View
+    if (jid === "status@broadcast" && autoreactControl.getStatusReactionState().enabled) {
+      try {
+        await sock.sendMessage(jid, {
+          react: { text: autoreactControl.getStatusReactionState().emoji, key: msg.key }
+        });
+      } catch (err) {
+        console.error("❌ Status AutoReact Error:", err.message);
+      }
+    }
+
     if (global.autostatus && jid === "status@broadcast") {  
       try {  
         await sock.readMessages([{  

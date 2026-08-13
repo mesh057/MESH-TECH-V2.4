@@ -23,14 +23,14 @@ function message(text, id = `message-${text}`, chatId = 'v24-test@g.us') {
 async function main() {
   const sent = [];
   const conn = {
-    user: { id: '254700000001:1@s.whatsapp.net' },
+    user: { id: '254700000009:1@s.whatsapp.net' },
     async sendMessage(jid, payload, options) {
       sent.push({ jid, payload, options });
       return { key: { id: `mock-${sent.length}` } };
     },
   };
 
-  global.owner = '254700000001@s.whatsapp.net';
+  global.owner = '254700000009@s.whatsapp.net';
   global.mode = 'public';
   antidelete.setBotId(conn);
 
@@ -48,14 +48,26 @@ async function main() {
     key: { remoteJid: chatId, participant: '254700000002@s.whatsapp.net', id: 'revoke-event', fromMe: false },
     message: { protocolMessage: { type: 0, key: { id: 'erased-message' } } },
   });
+  assert.strictEqual(sent.at(-1).jid, '254700000009@s.whatsapp.net',
+    'Recovered group content must be delivered only to the linked owner’s private chat.');
   assert.match(sent.at(-1).payload.text, /Restore this message/);
+  assert.match(sent.at(-1).payload.text, /Group chat/);
 
   await handleCommand(conn, message('.autoreactstatus on'));
-  assert.strictEqual(autoreact.isAutoreactEnabled(), true, 'The autoreactstatus alias must persist the enabled state.');
-  assert.strictEqual(global.autoreact, true, 'Live message handling must consume the enabled auto-react state.');
+  assert.strictEqual(autoreact.getStatusReactionState().enabled, true,
+    'The autoreactstatus command must persist enabled status reactions.');
+
+  await handleCommand(conn, message('.autoreactstatus emoji 💜'));
+  assert.strictEqual(autoreact.getStatusReactionState().emoji, '💜',
+    'The selected status reaction emoji must persist.');
 
   await handleCommand(conn, message('.autoreactstatus status'));
-  assert.match(sent.at(-1).payload.text, /ENABLED/);
+  assert.match(sent.at(-1).payload.text, /Enabled/);
+  assert.match(sent.at(-1).payload.text, /💜/);
+
+  await handleCommand(conn, message('.settings'));
+  assert.match(sent.at(-1).payload.text, /MESH V2\.4 SETTINGS/);
+  assert.match(sent.at(-1).payload.text, /Status emoji: 💜/);
 
   await handleCommand(conn, message('.antidelete off'));
   assert.strictEqual(antidelete.isAntideleteEnabled(chatId), false, 'Anti-delete must disable for the current chat.');

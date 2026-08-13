@@ -29,6 +29,12 @@ function isAntideleteEnabled(jid) {
   return toggles[jid] === true;
 }
 
+function ownerPrivateJid() {
+  const owner = Array.isArray(global.owner) ? global.owner[0] : global.owner;
+  const digits = String(owner || "").replace(/\D/g, "");
+  return digits ? `${digits}@s.whatsapp.net` : null;
+}
+
 const deletedMessages = new Map();
 let botId = null; // 🔥 Bot ki apni ID save karne ke liye
 
@@ -132,25 +138,32 @@ async function handleMessageRevocation(sock, msg) {
 
   const senderName = storedMsg.pushName || sender || "𝑺𝒐𝒎𝒆𝒐𝒏𝒆";
   const messageContent = extractMessageContent(storedMsg);
+  const ownerJid = ownerPrivateJid();
+
+  if (!ownerJid) {
+    console.error("❌ AntiDelete Error: no linked owner JID is available for private recovery delivery.");
+    return;
+  }
+
+  const sourceType = jid.endsWith("@g.us") ? "Group chat" : "Direct chat";
 
   const infoText = 
 `〔 ⚠️ *ＡＮＴＩ－ＤＥＬＥＴＥ ＤＥＴＥＣＴＥＤ* ⚠️ 〕
 ┃ 👤 𝘚𝘦𝘯𝘥𝘦𝘳: *${senderName}*
+┃ 📍 Source: *${sourceType}*
 ┃ 🗑️ 𝘋𝘦𝘭𝘦𝘵𝘦𝘥 𝘮𝘴𝘨 𝘳𝘦𝘤𝘰𝘷𝘦𝘳𝘦𝘥 ✨
 ┃ 
-┃ 💌 𝑺𝒆𝒄𝒖𝒓𝒆𝒅 𝒃𝒚 𝑻𝒂𝒚𝒚𝒂𝒃 𝑴𝑫
+┃ 🔒 Delivered privately to the linked owner
 ╰━━━━━━━━━━━━━━━━━━╯`;
 
   if (messageContent.text) {
-    await sock.sendMessage(jid, {
-      text: `${infoText}\n\n🌸 *Message:* ${messageContent.text}`,
-      mentions: [sender]
+    await sock.sendMessage(ownerJid, {
+      text: `${infoText}\n\n🌸 *Message:* ${messageContent.text}`
     });
   } else if (messageContent.media) {
-    await sock.sendMessage(jid, {
+    await sock.sendMessage(ownerJid, {
       caption: infoText,
-      [messageContent.type]: messageContent.media,
-      mentions: [sender]
+      [messageContent.type]: messageContent.media
     });
   }
 
@@ -190,5 +203,6 @@ module.exports = {
   handleMessageRevocation,
   toggleAntidelete,
   isAntideleteEnabled,
+  ownerPrivateJid,
   setBotId
 };
