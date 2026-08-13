@@ -24,6 +24,10 @@ async function main() {
   const sent = [];
   const conn = {
     user: { id: '254700000009:1@s.whatsapp.net' },
+    async groupMetadata(jid) {
+      assert.strictEqual(jid, 'v24-test@g.us');
+      return { subject: 'MESH V2.4 Test Group' };
+    },
     async sendMessage(jid, payload, options) {
       sent.push({ jid, payload, options });
       return { key: { id: `mock-${sent.length}` } };
@@ -41,6 +45,7 @@ async function main() {
   const erased = {
     key: { remoteJid: chatId, participant: '254700000002@s.whatsapp.net', id: 'erased-message', fromMe: false },
     pushName: 'Tester',
+    messageTimestamp: 1710000000,
     message: { conversation: 'Restore this message' },
   };
   antidelete.storeMessage(erased);
@@ -52,6 +57,9 @@ async function main() {
     'Recovered group content must be delivered only to the linked owner’s private chat.');
   assert.match(sent.at(-1).payload.text, /Restore this message/);
   assert.match(sent.at(-1).payload.text, /Group chat/);
+  assert.match(sent.at(-1).payload.text, /Tester/);
+  assert.match(sent.at(-1).payload.text, /MESH V2\.4 Test Group/);
+  assert.match(sent.at(-1).payload.text, /2024-03-09 16:00:00 UTC/);
 
   await handleCommand(conn, message('.autoreactstatus on'));
   assert.strictEqual(autoreact.getStatusReactionState().enabled, true,

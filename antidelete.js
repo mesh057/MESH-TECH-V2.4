@@ -35,6 +35,24 @@ function ownerPrivateJid() {
   return digits ? `${digits}@s.whatsapp.net` : null;
 }
 
+function formatTimestamp(value) {
+  const numeric = Number(value?.toString?.() || value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return "Unknown";
+  const milliseconds = numeric > 1e12 ? numeric : numeric * 1000;
+  return new Date(milliseconds).toISOString().replace("T", " ").replace(".000Z", " UTC");
+}
+
+async function sourceChatName(sock, jid) {
+  if (!jid.endsWith("@g.us")) return "Direct chat";
+  try {
+    const metadata = await sock.groupMetadata(jid);
+    return metadata?.subject || "Unnamed group";
+  } catch (error) {
+    console.error("❌ AntiDelete Group Metadata Error:", error.message);
+    return "Unknown group";
+  }
+}
+
 const deletedMessages = new Map();
 let botId = null; // 🔥 Bot ki apni ID save karne ke liye
 
@@ -146,11 +164,17 @@ async function handleMessageRevocation(sock, msg) {
   }
 
   const sourceType = jid.endsWith("@g.us") ? "Group chat" : "Direct chat";
+  const chatName = await sourceChatName(sock, jid);
+  const originalTimestamp = formatTimestamp(storedMsg.messageTimestamp);
+  const recoveredTimestamp = formatTimestamp(Date.now());
 
   const infoText = 
 `〔 ⚠️ *ＡＮＴＩ－ＤＥＬＥＴＥ ＤＥＴＥＣＴＥＤ* ⚠️ 〕
 ┃ 👤 𝘚𝘦𝘯𝘥𝘦𝘳: *${senderName}*
+┃ 👥 Group: *${chatName}*
 ┃ 📍 Source: *${sourceType}*
+┃ 🕓 Original: *${originalTimestamp}*
+┃ 🕒 Recovered: *${recoveredTimestamp}*
 ┃ 🗑️ 𝘋𝘦𝘭𝘦𝘵𝘦𝘥 𝘮𝘴𝘨 𝘳𝘦𝘤𝘰𝘷𝘦𝘳𝘦𝘥 ✨
 ┃ 
 ┃ 🔒 Delivered privately to the linked owner
@@ -204,5 +228,7 @@ module.exports = {
   toggleAntidelete,
   isAntideleteEnabled,
   ownerPrivateJid,
+  formatTimestamp,
+  sourceChatName,
   setBotId
 };
