@@ -17,8 +17,29 @@ const meshAi = require("./ai");
 const { getValue } = require("./system/storage");
 const { notifyBotEvent } = require("./multi-user/push-notifier");
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const question = (text) => new Promise((resolve) => rl.question(text, resolve));
+function normalizePhoneNumber(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+async function getPairingPhoneNumber() {
+  const fromEnvironment = normalizePhoneNumber(process.env.MESH_PAIRING_PHONE_NUMBER);
+  if (fromEnvironment) return fromEnvironment;
+
+  // Railway and other cloud hosts do not provide an interactive terminal. Keep
+  // the bot running so the owner can add MESH_PAIRING_PHONE_NUMBER and redeploy.
+  if (!process.stdin.isTTY) {
+    console.warn("⚠️ WhatsApp is not paired. Set MESH_PAIRING_PHONE_NUMBER in the host environment, then redeploy to print a pairing code.");
+    return "";
+  }
+
+  const terminal = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await new Promise((resolve) => terminal.question("📱 Enter your WhatsApp number (with country code): ", resolve));
+    return normalizePhoneNumber(answer);
+  } finally {
+    terminal.close();
+  }
+}
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("auth_info");
@@ -56,7 +77,6 @@ async function startBot() {
     if (connection === "open") {  
       console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
       void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
-      rl.close();  
     }  
 
     if (connection === "close") {  
@@ -254,19 +274,17 @@ async function startBot() {
 
   // ✅ Pairing code
   if (!state.creds?.registered) {
-    const phoneNumber = await question("📱 Enter your WhatsApp number (with country code): ");
-    await sock.requestPairingCode(phoneNumber.trim());
+    const phoneNumber = await getPairingPhoneNumber();
+    if (!phoneNumber) return;
 
-    setTimeout(() => {  
-      const code = sock.authState.creds?.pairingCode;  
-      if (code) {  
-        console.log("\n🔗 Pair this device using this code in WhatsApp:\n");  
-        console.log("   " + code + "\n");  
-        console.log("Go to WhatsApp → Linked Devices → Link with code.");  
-      } else {  
-        console.log("❌ Pairing code not found.");  
-      }  
-    }, 1000);
+    try {
+      const code = await sock.requestPairingCode(phoneNumber);
+      console.log("\n🔗 Pair this device using this code in WhatsApp:\n");
+      console.log("   " + code + "\n");
+      console.log("Go to WhatsApp → Linked Devices → Link with code.");
+    } catch (error) {
+      console.error("❌ Could not request WhatsApp pairing code:", error.message || error);
+    }
   }
 }
 

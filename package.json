@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "test:ai": "node test-mesh-ai.js && node test-companion-service.js && node test-push-notifier.js && node test-history-client.js",
+    "test:ai": "node test-mesh-ai.js && node test-companion-service.js && node test-push-notifier.js && node test-history-client.js && node test-hosting-startup.js",
     "install:legacy": "npm install --legacy-peer-deps"
   },
   "author": "MESH TECH",

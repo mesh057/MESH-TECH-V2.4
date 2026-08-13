@@ -121,6 +121,10 @@ Automatic direct-message replies are **off by default**. After configuring the p
 
 Copy the relevant settings from `.env.ai.example` into your hosting provider’s private environment-variable panel. Keep `MESH_AI_API_KEY`, `MESH_AI_TAVILY_API_KEY`, and all other credentials private; never commit a real `.env` file, authentication folder, or session credential.
 
+### Railway and other unattended hosts
+
+Railway cannot answer a terminal question at startup. When the bot has no saved `auth_info` session, add `MESH_PAIRING_PHONE_NUMBER` in Railway Variables using the WhatsApp number in international digits only, for example `254700000000`. Redeploy, copy the one-time pairing code from the Deploy Logs, and enter it in WhatsApp under **Linked devices → Link with phone number**. After WhatsApp links successfully, Railway keeps the saved session volume and you can remove the pairing-number variable if you want. Never publish the number, pairing code, or `auth_info` folder in GitHub.
+
 | Provider mode | Use when | Required settings |
 | --- | --- | --- |
 | `managed` | You want the bot to call an AI account that you own with usage-based billing. | `MESH_AI_API_KEY`, `MESH_AI_MANAGED_BASE_URL`, and `MESH_AI_MANAGED_MODEL` |
