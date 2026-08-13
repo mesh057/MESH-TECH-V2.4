@@ -23,15 +23,15 @@ function getDateTime(timezone = 'Africa/Nairobi') {
   return { date, time, greeting };
 }
 
-function getStatusBox(timezone = 'Africa/Nairobi', userCount = 0, commandCount = 0, connectedBotCount = 1) {
+function getStatusBox(timezone = 'Africa/Nairobi', userCount = 0, commandCount = 0, connectedBotCount = 1, ownerNumber) {
   const { date, time, greeting } = getDateTime(timezone);
   const uptimeSec = Math.floor(process.uptime());
   const hours = Math.floor(uptimeSec / 3600);
   const minutes = Math.floor((uptimeSec % 3600) / 60);
   const seconds = uptimeSec % 60;
-  let ownerNumber = '254746844168';
+  let displayedOwner = ownerNumber || '254746844168';
   try {
-    ownerNumber = require('../config/config').ownerNumber || ownerNumber;
+    displayedOwner = ownerNumber || require('../config/config').ownerNumber || displayedOwner;
   } catch {}
   return `
 ╭━━━ *𝗠𝗘𝗦𝗛-𝗧𝗘𝗖𝗛 𝗠𝗗 𝗕𝗢𝗧* ━━━╮
@@ -39,11 +39,12 @@ function getStatusBox(timezone = 'Africa/Nairobi', userCount = 0, commandCount =
 ┃ 🔥 𝗠𝗼𝗱𝗲: PUBLIC|FULL POWER
 ┃ 💀 𝗣𝗿𝗼𝘁𝗼𝗰𝗼𝗹: PHANTOM CORE
 ┃ 👑 𝗢𝘄𝗻𝗲𝗿: 𝕄𝔼𝕊ℍ
-┃ 📞 𝗡𝘂𝗺𝗯𝗲𝗿: ${ownerNumber}
+┃ 📞 𝗡𝘂𝗺𝗯𝗲𝗿: ${displayedOwner}
 ┃ ⚙️ 𝗩𝗲𝗿𝘀𝗶𝗼𝗻: v5.0.0 [MESH INFINITY RELEASE]
 ┃ ⏳ 𝗨𝗽𝘁𝗶𝗺𝗲: ${hours}h ${minutes}m ${seconds}s
 ┃ 📅 𝗗𝗮𝘁𝗲: ${date}
 ┃ 🕒 𝗧𝗶𝗺𝗲: ${time}
+┃ 💾 𝗥𝗔𝗠: 128 GB
 ┃ 📌 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀: ${commandCount} 𝗟𝗼𝗮𝗱𝗲𝗱
 ┃ 👥 𝗨𝘀𝗲𝗿𝘀: ${userCount} Active (𝗿𝗲𝗮𝗹-𝘁𝗶𝗺𝗲)
 ┃ 🤖 𝗕𝗼𝘁𝘀 𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱: ${connectedBotCount} 𝗟𝗶𝘃𝗲
@@ -92,25 +93,22 @@ function formatGroup(title, commands, prefix = '.') {
   return `╔═❖•⊰ ${emoji} *${title} MENU* ⊱•❖═╗\n${lines.join('\n')}\n╚════════════════════╝`;
 }
 
-function getMenu(commands = new Map(), timezone = 'Africa/Nairobi', userCount = 0) {
+function getMenu(commands = new Map(), timezone = 'Africa/Nairobi', userCount = 0, options = {}) {
   const groups = commandGroups(commands);
   const loaded = uniqueCommands(commands);
   const liveUserCount = userCount || (() => {
     try { return Number(global.activeUserCount || 0); } catch { return 0; }
   })();
-  const connectedBotCount = (() => {
-    try {
-      const { execSync } = require('child_process');
-      const out = execSync('pgrep -fc "node index.js" 2>/dev/null || echo 0', { encoding: 'utf8' }).trim();
-      return Math.max(1, parseInt(out, 10) || 1);
-    } catch { return 1; }
-  })();
+  const connectedBotCount = Math.max(1, Number(options.connectedBotCount || global.activeUserCount || 1));
   const prefix = String(config.prefix || '.');
   const sections = groups.length
     ? groups.map(([title, entries]) => formatGroup(title, entries, prefix)).join('\n\n')
     : formatGroup('COMMANDS', [{ name: 'No commands loaded' }], prefix);
 
-  return `${getStatusBox(timezone, liveUserCount, loaded.length, connectedBotCount)}
+  const statusHeader = options.includeHeader === false
+    ? ''
+    : `${getStatusBox(timezone, liveUserCount, loaded.length, connectedBotCount, options.ownerNumber)}\n`;
+  return `${statusHeader}
 ╔═❖•⊰ *𝗖𝗢𝗠𝗠𝗔𝗡𝗗 𝗠𝗘𝗡𝗨* ⊱•❖═╗
 ║୧⍤⃝💐 𝗔𝗹𝗹 𝗹𝗼𝗮𝗱𝗲𝗱 𝗰𝗼𝗺𝗺𝗮𝗻𝗱𝘀
 ╚═══════════════════╝

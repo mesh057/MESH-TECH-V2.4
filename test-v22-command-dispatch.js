@@ -34,6 +34,7 @@ async function main() {
 
     assert.deepStrictEqual(await runtime.execute('menu', sock, msg, []), { handled: true });
     assert(sent.length >= 4, 'The full menu must send a selectable list and readable fallback catalog.');
+    assert.match(sent.find((entry) => /𝗥𝗔𝗠: 128 GB/.test(entry.payload.text || ''))?.payload.text || '', /𝗥𝗔𝗠: 128 GB/);
 
     assert.deepStrictEqual(await runtime.execute('help', sock, msg, []), { handled: true });
     assert.match(sent.at(-1).payload.text, /Available Commands/);
@@ -46,7 +47,8 @@ async function main() {
     assert.match(sent.at(-1).payload.text, /could not complete right now/);
 
     assert.deepStrictEqual(await runtime.execute('alive', sock, msg, []), { handled: true });
-    assert.match(sent.at(-1).payload.text, /I'M ALIVE MATE/);
+    assert.match(sent.at(-2).payload.text, /I'M ALIVE MATE/);
+    assert(Buffer.isBuffer(sent.at(-1).payload.audio), 'The alive command should follow its text with the bundled audio clip.');
     console.log('PASS: V2.2 runtime dispatches public, owner, and menu commands inside an isolated session.');
   } finally {
     fs.rmSync(sessionDir, { recursive: true, force: true });

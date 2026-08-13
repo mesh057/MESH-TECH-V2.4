@@ -16,7 +16,11 @@ const CATEGORY_EMOJIS = {
   GENERAL: '✨', STALK: '🔍', MISC: '🧩', EDIT: '🎨',
 };
 
-function buildDropdown(commands) {
+function sessionOwnerNumber(sock) {
+  return String(sock?.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '');
+}
+
+function buildDropdown(commands, statusHeader) {
   const unique = menuModule.uniqueCommands(commands);
   const groups = menuModule.commandGroups(commands);
   const prefix = String(config.prefix || '.');
@@ -33,7 +37,7 @@ function buildDropdown(commands) {
   });
 
   return {
-    text: `📋 MESH-TECH • ${unique.length} COMMANDS LOADED`,
+    text: statusHeader,
     title: '╭━━━ 📋 COMMAND DIRECTORY ━━━╮',
     footer: `⚡ Select a decorated command • Prefix: ${prefix}`,
     buttonText: `📂 VIEW ${unique.length} COMMANDS`,
@@ -63,7 +67,11 @@ module.exports = {
       : commandsOrResources?.commands instanceof Map
         ? commandsOrResources.commands
         : new Map();
-    const listMessage = buildDropdown(commands);
+    const timezone = detectTimezone(msg.key.participant || jid);
+    const ownerNumber = sessionOwnerNumber(sock);
+    const userCount = Number(global.activeUserCount || 0);
+    const statusHeader = menuModule.getStatusBox(timezone, userCount, commands.size, Math.max(1, userCount), ownerNumber);
+    const listMessage = buildDropdown(commands, statusHeader);
 
     // Baileys renders this payload as WhatsApp's native list/dropdown menu.
     // Keep the command count in the title so it remains visible before opening it.
@@ -72,14 +80,12 @@ module.exports = {
       // Some WhatsApp clients accept the native list payload but render only
       // its header. Follow it with a visible text catalog so commands remain
       // accessible even when the client fails to expose list rows.
-      const timezone = detectTimezone(msg.key.participant || jid);
-      const visibleCatalog = menuModule.getMenu(commands, timezone, Number(global.activeUserCount || 0));
+      const visibleCatalog = menuModule.getMenu(commands, timezone, userCount, { includeHeader: false, ownerNumber });
       await sock.sendMessage(jid, { text: visibleCatalog }, { quoted: msg });
       return nativeResult;
     } catch (error) {
       // Older WhatsApp clients can reject native lists; never hide the commands.
-      const timezone = detectTimezone(msg.key.participant || jid);
-      const fallback = menuModule.getMenu(commands, timezone, Number(global.activeUserCount || 0));
+      const fallback = menuModule.getMenu(commands, timezone, userCount, { ownerNumber });
       console.warn(`[menu] Native dropdown rejected; using text fallback: ${error.message}`);
       return sock.sendMessage(jid, { text: fallback }, { quoted: msg });
     }
