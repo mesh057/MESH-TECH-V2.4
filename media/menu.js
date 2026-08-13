@@ -61,15 +61,17 @@ const WORKING_V24_GROUPS = [
   ['AI', '🤖', ['ai <question>', 'mesh <question>', 'ask <question>', 'chatbot on|off|status']],
   ['SYSTEM', '🌐', ['public', 'self', 'settings']],
   ['AUTOMATION', '🪅', [
-    'autostatus on|off', 'autoviewstatus on|off', 'autoreact on|off|status',
-    'autoreactstatus on|off|status', 'autoreactstatus emoji 💜', 'autoread on|off',
+    'autostatus on|off', 'autoviewstatus on|off', 'autoreactstatus on|off|status',
+    'autoreactstatus emoji 💜', 'autoreact on|off|status', 'autoread on|off',
     'autorecording on|off', 'autotyping on|off', 'autogreet on|off',
   ]],
   ['PROTECTION', '🛡️', [
     'antidelete on|off|status', 'antideleteforward on|off|status',
     'antilink on|off', 'antilinkick on|off', 'antibug on|off',
   ]],
-  ['GROUP', '👥', ['kick @member']],
+  ['GROUP', '👥', [
+    'kick @member', 'autogreet on|off', 'antilink on|off',
+  ]],
 ];
 
 function numberedLine(index, command) {
