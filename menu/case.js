@@ -13,6 +13,7 @@ const commandAliases = {
   ask: "ai",
   autoview: "autostatus",
   autoviewstatus: "autostatus",
+  autoreactstatus: "autoreact",
   commands: "menu",
   command: "menu",
   help: "menu",

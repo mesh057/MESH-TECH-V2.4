@@ -22,11 +22,12 @@ const commandGuide = `${header}
 *AUTOMATION — OWNER ONLY*
 • \`.autostatus on|off\` — auto-view WhatsApp statuses
 • \`.autoviewstatus on|off\` — compatible name for \`.autostatus\`
-• \`.autoreact on|off\` — automatic reactions
+• \`.autoreact on|off|status\` — automatic reactions
+• \`.autoreactstatus on|off|status\` — compatible auto-reaction command
 • \`.autoread on|off\` — automatic message reads
 • \`.autorecording on|off\` — show or hide recording presence
 • \`.autogreet on|off\` — group join/leave greetings
-• \`.antidelete on|off\` — anti-delete control
+• \`.antidelete on|off|status\` — anti-delete control
 
 *GROUP*
 • \`.kick @member\` — remove a group participant when the bot has admin permission
@@ -37,11 +38,11 @@ const automationGuide = `${header}
 
 *AUTOMATION COMMANDS*
 • \`.autostatus on|off\` (also \`.autoviewstatus\`)
-• \`.autoreact on|off\`
+• \`.autoreact on|off|status\` (also \`.autoreactstatus\`)
 • \`.autoread on|off\`
 • \`.autorecording on|off\`
 • \`.autogreet on|off\` (group only)
-• \`.antidelete on|off\`
+• \`.antidelete on|off|status\`
 
 All automation controls require the connected bot owner.`;
 

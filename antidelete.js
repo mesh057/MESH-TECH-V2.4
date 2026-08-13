@@ -4,13 +4,20 @@
 const fs = require("fs");
 const path = require("path");
 
-const filePath = path.join(__dirname, "delete.json");
-const toggleFile = path.join(__dirname, "antidelete.json");
+const stateDir = path.resolve(process.env.MESH_ANTIDELETE_STATE_DIR || process.cwd());
+const filePath = path.join(stateDir, "delete.json");
+const toggleFile = path.join(stateDir, "antidelete.json");
+
+fs.mkdirSync(stateDir, { recursive: true });
 
 // ✅ Load or initialize toggles
 let toggles = {};
 if (fs.existsSync(toggleFile)) {
-  toggles = JSON.parse(fs.readFileSync(toggleFile));
+  try {
+    toggles = JSON.parse(fs.readFileSync(toggleFile, "utf8"));
+  } catch {
+    toggles = {};
+  }
 }
 
 // ✅ Save toggle settings
@@ -18,9 +25,8 @@ function saveToggles() {
   fs.writeFileSync(toggleFile, JSON.stringify(toggles, null, 2));
 }
 
-// ✅ Auto-reset deleted messages file when bot starts
-if (fs.existsSync(filePath)) {
-  fs.unlinkSync(filePath);
+function isAntideleteEnabled(jid) {
+  return toggles[jid] === true;
 }
 
 const deletedMessages = new Map();
@@ -68,6 +74,15 @@ function storeMessage(msg) {
 // ✅ TOGGLE Command
 async function toggleAntidelete({ conn, m, args, reply, jid }) {
   const option = (args[0] || "").toLowerCase();
+  if (option === "status") {
+    return reply(
+`〔 ✨ *ＡＮＴＩ－ＤＥＬＥＴＥ ＳＴＡＴＵＳ* ✨ 〕
+┃ Protection: *${isAntideleteEnabled(jid) ? "ＥＮＡＢＬＥＤ ✅" : "ＤＩＳＡＢＬＥＤ ❌"}*
+┃ Applies to: *This chat*
+╰━━━━━━━━━━━━━━━━━━╯`
+    );
+  }
+
   if (!["on", "off"].includes(option)) {
     return reply(
 `〔 ✨ *ＡＮＴＩ－ＤＥＬＥＴＥ* ✨ 〕
@@ -103,7 +118,7 @@ async function handleMessageRevocation(sock, msg) {
   if (!jid || !id || !deletedMessages.has(jid)) return;
 
   // ✅ Respect toggle setting
-  if (!toggles[jid]) return;
+  if (!isAntideleteEnabled(jid)) return;
 
   const storedMsg = deletedMessages.get(jid).get(id);
   if (!storedMsg) return;
@@ -174,5 +189,6 @@ module.exports = {
   storeMessage,
   handleMessageRevocation,
   toggleAntidelete,
+  isAntideleteEnabled,
   setBotId
 };

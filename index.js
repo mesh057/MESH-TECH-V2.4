@@ -10,7 +10,8 @@ const {
 
 const { handleCommand } = require("./menu/case");
 const { loadSettings } = require("./settings");
-const { storeMessage, handleMessageRevocation } = require("./antidelete");
+const { storeMessage, handleMessageRevocation, isAntideleteEnabled, setBotId } = require("./antidelete");
+const autoreactControl = require("./autoreact");
 const AntiLinkKick = require("./antilinkick.js");
 const { antibugHandler } = require("./antibug.js"); // ✅ import correct function
 const meshAi = require("./ai");
@@ -74,6 +75,7 @@ async function startBot() {
   const ownerJid = ownerRaw.includes("@s.whatsapp.net") ? ownerRaw : ownerRaw + "@s.whatsapp.net";
 
   global.sock = sock;
+  setBotId(sock);
   global.settings = settings;
   global.signature = settings.signature || "> MESH TECH MD ✓";
   global.owner = ownerJid;
@@ -91,7 +93,7 @@ async function startBot() {
   global.antibug = false;
   global.autogreet = {};
   global.autotyping = false;
-  global.autoreact = false;
+  global.autoreact = autoreactControl.isAutoreactEnabled();
   global.autostatus = false;
 
   console.log("✅ BOT OWNER:", global.owner);
@@ -123,18 +125,16 @@ async function startBot() {
     const jid = msg.key.remoteJid;
     const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
 
-    // ✅ AntiDelete
-    if (settings.ANTIDELETE === true) {  
-      try {  
-        if (msg.message) storeMessage(msg);  
-        if (msg.message?.protocolMessage?.type === 0) {  
-          await handleMessageRevocation(sock, msg);  
-          return;  
-        }  
-      } catch (err) {  
-        console.error("❌ AntiDelete Error:", err.message);  
-      }  
-    }  
+    // ✅ Per-chat AntiDelete, controlled by `.antidelete on|off|status`.
+    try {
+      if (msg.message?.protocolMessage?.type === 0) {
+        await handleMessageRevocation(sock, msg);
+        return;
+      }
+      if (isAntideleteEnabled(jid)) storeMessage(msg);
+    } catch (err) {
+      console.error("❌ AntiDelete Error:", err.message);
+    }
 
     // ✅ AutoTyping
     if (global.autotyping && jid !== "status@broadcast") {  
