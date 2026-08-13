@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node multi-user/server.js",
-    "test:ai": "node test-mesh-ai.js && node test-companion-service.js && node test-push-notifier.js && node test-history-client.js && node test-hosting-startup.js && node test-multi-user-hosting.js && node test-pairing-code-parser.js && node test-multi-user-command-mode.js && node test-session-restoration.js",
+    "test:ai": "node test-mesh-ai.js && node test-companion-service.js && node test-push-notifier.js && node test-history-client.js && node test-hosting-startup.js && node test-multi-user-hosting.js && node test-pairing-code-parser.js && node test-multi-user-command-mode.js && node test-session-restoration.js && node test-v24-command-aliases.js",
     "install:legacy": "npm install --legacy-peer-deps"
   },
   "author": "MESH TECH",

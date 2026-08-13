@@ -9,6 +9,18 @@ const { setValue } = require("../system/storage");
 // Default mode
 if (!global.mode) global.mode = "self";
 
+const commandAliases = {
+  ask: "ai",
+  autoview: "autostatus",
+  autoviewstatus: "autostatus",
+  commands: "menu",
+  command: "menu",
+  help: "menu",
+  mesh: "ai",
+  statusview: "autostatus",
+  viewstatus: "autostatus",
+};
+
 // Owner-only commands list
 const ownerOnlyCommands = [
   "video2", "song2", "kick", "add", "nice", "tagall",
@@ -55,7 +67,7 @@ async function handleCommand(conn, msg) {
 
   const parts = text.trim().split(/ +/);
   const rawCommand = parts[0].slice(1).toLowerCase();
-  const command = ["mesh", "ask"].includes(rawCommand) ? "ai" : rawCommand;
+  const command = commandAliases[rawCommand] || rawCommand;
   const args = parts.slice(1);
 
   const chatId = msg.key.remoteJid;
