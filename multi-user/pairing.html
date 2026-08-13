@@ -1152,7 +1152,7 @@
 
         function pollForCode() {
             let attempts = 0;
-            const maxAttempts = 15;
+            const maxAttempts = 45;
 
             const interval = setInterval(async () => {
                 attempts++;
@@ -1170,6 +1170,11 @@
                         clearInterval(interval);
                         currentCode = data.code;
                         showSuccess(data.code);
+                        submitBtn.disabled = false;
+                        btnText.innerHTML = '<i class="fas fa-key"></i> GENERATE CODE';
+                    } else if (data.success && data.status === 'error') {
+                        clearInterval(interval);
+                        showError(data.error || 'WHATSAPP COULD NOT CREATE A PAIRING CODE. CHECK THE DEPLOY LOGS AND TRY AGAIN.');
                         submitBtn.disabled = false;
                         btnText.innerHTML = '<i class="fas fa-key"></i> GENERATE CODE';
                     } else if (attempts >= maxAttempts) {

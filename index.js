@@ -21,6 +21,26 @@ function normalizePhoneNumber(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function requestPairingCodeWithRetries(sock, phoneNumber) {
+  let lastError = new Error("WhatsApp did not return a pairing code.");
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try {
+      // The Baileys socket needs a moment to establish its initial transport on
+      // cloud hosts. Subsequent attempts provide a bounded recovery window.
+      await wait(1200 * attempt);
+      const code = await sock.requestPairingCode(phoneNumber);
+      if (code) return code;
+      lastError = new Error("WhatsApp returned an empty pairing code.");
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(`⚠️ Pairing-code attempt ${attempt}/4 failed: ${lastError.message}`);
+    }
+  }
+  throw lastError;
+}
+
 async function getPairingPhoneNumber() {
   const fromEnvironment = normalizePhoneNumber(process.env.MESH_PAIRING_PHONE_NUMBER);
   if (fromEnvironment) return fromEnvironment;
@@ -278,7 +298,7 @@ async function startBot() {
     if (!phoneNumber) return;
 
     try {
-      const code = await sock.requestPairingCode(phoneNumber);
+      const code = await requestPairingCodeWithRetries(sock, phoneNumber);
       console.log("\n🔗 Pair this device using this code in WhatsApp:\n");
       console.log("   " + code + "\n");
       // Machine-readable marker for the multi-user pairing server. Keep this
@@ -286,7 +306,9 @@ async function startBot() {
       console.log(`PAIRING_CODE ${code}`);
       console.log("Go to WhatsApp → Linked Devices → Link with code.");
     } catch (error) {
-      console.error("❌ Could not request WhatsApp pairing code:", error.message || error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("❌ Could not request WhatsApp pairing code:", message);
+      console.error(`PAIRING_ERROR ${message}`);
     }
   }
 }

@@ -10,6 +10,11 @@ function extractPairingCode(output) {
   return match ? match[1].toUpperCase() : null;
 }
 
+function extractPairingError(output) {
+  const match = String(output || '').match(/\bPAIRING_ERROR\s+([^\n\r]+)/i);
+  return match ? match[1].trim().slice(0, 240) : null;
+}
+
 class MultiUserSessionManager {
   constructor(options = {}) {
     this.rootDir = path.resolve(options.rootDir || process.env.MULTI_USER_AUTH_DIR || 'auth_sessions');
@@ -56,6 +61,7 @@ class MultiUserSessionManager {
       authDir,
       status: 'starting',
       code: null,
+      error: null,
       startedAt: new Date().toISOString(),
       lastOutput: '',
       outputBuffer: '',
@@ -81,7 +87,13 @@ class MultiUserSessionManager {
       const code = extractPairingCode(record.outputBuffer);
       if (code) {
         record.code = code;
+        record.error = null;
         record.status = 'pairing_code_ready';
+      }
+      const pairingError = extractPairingError(record.outputBuffer);
+      if (pairingError && !record.code) {
+        record.error = pairingError;
+        record.status = 'error';
       }
       if (/BOT OWNER|Connected|connection open/i.test(output) && !record.code) record.status = 'running';
     };
@@ -95,6 +107,7 @@ class MultiUserSessionManager {
       if (record.status !== 'stopped') record.status = code === 0 ? 'stopped' : 'error';
       record.exitCode = code;
       record.signal = signal;
+      if (record.status === 'error' && !record.error) record.error = record.lastOutput || 'The WhatsApp pairing session stopped unexpectedly.';
     });
 
     return this.publicSession(record);
@@ -116,10 +129,11 @@ class MultiUserSessionManager {
       accessToken: record.accessToken,
       status: record.status,
       code: record.code,
+      error: record.error,
       pid: record.pid,
       authDir: record.authDir,
     };
   }
 }
 
-module.exports = { MultiUserSessionManager, extractPairingCode };
+module.exports = { MultiUserSessionManager, extractPairingCode, extractPairingError };
