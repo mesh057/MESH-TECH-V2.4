@@ -6,8 +6,10 @@ const os = require('os');
 const path = require('path');
 
 process.env.MESH_ANTILINKKICK_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-antilinkkick-router-'));
+process.env.MESH_PROTECTION_LOG_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-protection-log-router-'));
 const menu = require('./media/menu');
 const { handleCommand } = require('./menu/case');
+const protectionLog = require('./protection-log');
 
 function message(text) {
   return {
@@ -80,6 +82,42 @@ async function main() {
   assert.match(sent.at(-1).payload.text, /strike limit set to \*3\*/i,
     'A group administrator must be able to configure the anti-link strike limit.');
 
+  await handleCommand(conn, {
+    key: {
+      remoteJid: 'v24-menu-test@g.us',
+      participant: '254700000002@s.whatsapp.net',
+      fromMe: false,
+      id: 'v24-protection-log-off',
+    },
+    message: { conversation: '.protectionlog off' },
+  });
+  assert.strictEqual(protectionLog.isProtectionLoggingEnabled('v24-menu-test@g.us'), false,
+    'A verified group administrator must be able to disable group protection logging.');
+  assert.match(sent.at(-1).payload.text, /DISABLED/);
+
+  await handleCommand(conn, {
+    key: {
+      remoteJid: 'v24-menu-test@g.us',
+      participant: '254700000002@s.whatsapp.net',
+      fromMe: false,
+      id: 'v24-protection-log-status',
+    },
+    message: { conversation: '.protectionlog status' },
+  });
+  assert.match(sent.at(-1).payload.text, /DISABLED/);
+
+  await handleCommand(conn, {
+    key: {
+      remoteJid: 'v24-menu-test@g.us',
+      participant: '254700000002@s.whatsapp.net',
+      fromMe: false,
+      id: 'v24-protection-log-on',
+    },
+    message: { conversation: '.protectionlog on' },
+  });
+  assert.strictEqual(protectionLog.isProtectionLoggingEnabled('v24-menu-test@g.us'), true);
+  assert.match(sent.at(-1).payload.text, /ENABLED/);
+
   assert.match(menu.menu, /╔═❖•⊰ \*𝗖𝗢𝗠𝗠𝗔𝗡𝗗 𝗠𝗘𝗡𝗨\* ⊱•❖═╗/);
   assert.match(menu.menu, /╔═❖•⊰ 🪅 \*AUTOMATION MENU\* ⊱•❖═╗/);
   assert.match(menu.menu, /║➊ ⟿ \.autostatus on\|off/);
@@ -90,6 +128,7 @@ async function main() {
   assert.match(menu.menu, /\.antilink on\|off/);
   assert.match(menu.menu, /\.antilinkkick on\|off\|status/);
   assert.match(menu.menu, /\.antilinkkick strikes 3\|clear/);
+  assert.match(menu.menu, /\.protectionlog on\|off\|status/);
   for (const commandFile of ['kick.js', 'autogreet.js', 'antilink.js', 'antilinkkick.js']) {
     assert.ok(fs.existsSync(path.join(__dirname, commandFile)), `${commandFile} must back its menu entry.`);
   }

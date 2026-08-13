@@ -5,6 +5,7 @@ const { generateWAMessageFromContent } = require("@whiskeysockets/baileys");
 const { isAntideleteEnabled, isPrivateForwardingEnabled, toggleAntidelete, togglePrivateForwarding } = require("../antidelete");
 const autoreactControl = require("../autoreact");
 const antilinkKickControl = require("../antilinkkick");
+const protectionLogControl = require("../protection-log");
 const meshAi = require("../ai");
 const { setValue } = require("../system/storage");
 
@@ -51,7 +52,7 @@ const ownerOnlyCommands = [
   "leave", "open", "close", "tagadmin", "hidetag", "listactive",
   "changename", "closetime", "warn", "promote", "demote",
   "promoteall", "demoteall", "say", "cpp", "harami", "ghostping",
-  "adminkill", "delaymsg", "autorecording"
+  "adminkill", "delaymsg", "autorecording", "protectionlog"
 ];
 
 // Load menu.js
@@ -141,13 +142,14 @@ async function handleCommand(conn, msg) {
   }
 
   const canManageAntilinkKick = ['antilinkkick', 'antilinkick'].includes(command) && isGroup && await isGroupAdmin(conn, chatId, senderId);
+  const canManageProtectionLog = command === 'protectionlog' && isGroup && await isGroupAdmin(conn, chatId, senderId);
 
   // 🔸 Mode restrictions
-  if (global.mode === "self" && !isOwner && !canManageAntilinkKick && !["menu", "repo", "idcheck"].includes(command)) {
+  if (global.mode === "self" && !isOwner && !canManageAntilinkKick && !canManageProtectionLog && !["menu", "repo", "idcheck"].includes(command)) {
     return;
   }
 
-  if (global.mode === "public" && ownerOnlyCommands.includes(command) && !isOwner && !canManageAntilinkKick) {
+  if (global.mode === "public" && ownerOnlyCommands.includes(command) && !isOwner && !canManageAntilinkKick && !canManageProtectionLog) {
     return reply("💀 *OWNER ONLY COMMAND!* You ain't my master londey!");
   }
 
@@ -238,6 +240,10 @@ async function runCommand({
       return require("../antibug").configureAntiBug({ args, reply, jid: chatId, isGroup });
     }
 
+    if (command === "protectionlog") {
+      return protectionLogControl.configureProtectionLog({ args, reply, jid: chatId, isGroup });
+    }
+
     // 🔸 MESH AI
     if (command === "ai") {
       return meshAi.run({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
@@ -261,6 +267,7 @@ async function runCommand({
 ┃ Anti-link kick (this group): *${isGroup && antilinkKickControl.isAntilinkKickEnabled(chatId) ? "ON" : "OFF"}*
 ┃ Anti-link warnings before removal: *${isGroup ? antilinkKickControl.getStrikeLimit(chatId) : "—"}*
 ┃ Anti-bug (this group): *${isGroup && require("../antibug").isAntiBugEnabled(chatId) ? "ON" : "OFF"}*
+┃ Protection logs (this group): *${isGroup && protectionLogControl.isProtectionLoggingEnabled(chatId) ? "ON" : "OFF"}*
 ┃ Auto-react (messages): *${autoreactControl.isAutoreactEnabled() ? "ON" : "OFF"}*
 ┃ Status auto-react: *${statusReact.enabled ? "ON" : "OFF"}*
 ┃ Status emoji: ${statusReact.emoji}

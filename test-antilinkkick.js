@@ -7,7 +7,9 @@ const path = require('path');
 
 const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-antilinkkick-'));
 process.env.MESH_ANTILINKKICK_STATE_DIR = stateDir;
+process.env.MESH_PROTECTION_LOG_STATE_DIR = stateDir;
 const antilinkkick = require('./antilinkkick');
+const protectionLog = require('./protection-log');
 
 const groupJid = 'antilinkkick-test@g.us';
 const senderJid = '254700000002@s.whatsapp.net';
@@ -97,6 +99,22 @@ async function main() {
   assert.match(sent[6].payload.text, /3-strike anti-link limit/);
   assert.match(sent[7].payload.text, /ANTI-LINK-KICK REMOVAL/);
   assert.deepStrictEqual(sent[7].payload.mentions, [adminJid], 'Only verified non-bot group admins must receive the incident log.');
+
+  await antilinkkick.configureAntilinkKick({
+    m: { key: { remoteJid: groupJid } }, args: ['strikes', '1'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,
+  });
+  protectionLog.setProtectionLoggingEnabled(groupJid, false);
+  const sentBeforeDisabledLog = sent.length;
+  await antilinkkick.checkAntilinkKick({
+    conn,
+    m: {
+      key: { remoteJid: groupJid, participant: senderJid, id: 'link-message-no-log', fromMe: false },
+      message: { conversation: 'https://example.com/no-log' },
+    },
+    waitForWarning: async () => {},
+  });
+  assert.strictEqual(sent.length, sentBeforeDisabledLog + 3, 'Disabling protection logging must suppress only the anti-link-kick admin incident message.');
+  protectionLog.setProtectionLoggingEnabled(groupJid, true);
 
   await antilinkkick.configureAntilinkKick({
     m: { key: { remoteJid: groupJid } }, args: ['strikes', '2'], reply: (text) => replies.push(text), jid: groupJid, isGroup: true,

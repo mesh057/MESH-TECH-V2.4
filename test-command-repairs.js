@@ -8,9 +8,11 @@ const path = require('path');
 const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-command-repairs-'));
 process.env.MESH_ANTILINKKICK_STATE_DIR = stateDir;
 process.env.MESH_ANTIBUG_STATE_DIR = stateDir;
+process.env.MESH_PROTECTION_LOG_STATE_DIR = stateDir;
 
 const { handleCommand } = require('./menu/case');
 const antiBug = require('./antibug');
+const protectionLog = require('./protection-log');
 
 const groupJid = 'repair-test@g.us';
 const botJid = '254700000001@s.whatsapp.net';
@@ -72,6 +74,17 @@ async function main() {
   assert.strictEqual(sent.at(-2).payload.delete.id, 'suspicious-message');
   assert.match(sent.at(-1).payload.text, /ANTI-BUG MESSAGE REMOVAL/);
   assert.deepStrictEqual(sent.at(-1).payload.mentions, [adminJid], 'Only verified non-bot group admins must receive the anti-bug incident log.');
+
+  protectionLog.setProtectionLoggingEnabled(groupJid, false);
+  const sentBeforeDisabledLog = sent.length;
+  const suppressedLogMessage = {
+    key: { remoteJid: groupJid, participant: memberJid, fromMe: false, id: 'suspicious-message-no-log' },
+    message: { conversation: 'x'.repeat(5001) },
+  };
+  assert.strictEqual(await antiBug.antibugHandler({ conn, m: suppressedLogMessage }), true);
+  assert.strictEqual(sent.length, sentBeforeDisabledLog + 1, 'Disabling protection logging must suppress the anti-bug admin incident message, not enforcement.');
+  assert.strictEqual(sent.at(-1).payload.delete.id, 'suspicious-message-no-log');
+  protectionLog.setProtectionLoggingEnabled(groupJid, true);
 
   const adminConn = {
     ...conn,
