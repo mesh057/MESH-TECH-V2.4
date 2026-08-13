@@ -66,8 +66,8 @@ async function main() {
   assert.match(menu.menu, /\.autoreactstatus emoji 💜/);
   assert.match(menu.menu, /║➋ ⟿ \.autogreet on\|off/);
   assert.match(menu.menu, /\.antilink on\|off/);
-  assert.doesNotMatch(menu.menu, /\.antilinkkick on\|off/);
-  for (const commandFile of ['kick.js', 'autogreet.js', 'antilink.js']) {
+  assert.match(menu.menu, /\.antilinkkick on\|off\|status/);
+  for (const commandFile of ['kick.js', 'autogreet.js', 'antilink.js', 'antilinkkick.js']) {
     assert.ok(fs.existsSync(path.join(__dirname, commandFile)), `${commandFile} must back its menu entry.`);
   }
   assert.doesNotMatch(menu.menu, /222\+|HELL-MD/);

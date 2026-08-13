@@ -206,7 +206,7 @@ async function startBot() {
     // ✅ AntilinkKick
     if (
       jid.endsWith("@g.us") &&
-      global.antilinkick[jid] === true &&
+      AntiLinkKick.isAntilinkKickEnabled(jid) &&
       /(chat\.whatsapp\.com|t\.me|discord\.gg|wa\.me|bit\.ly|youtu\.be|https?:\/\/)/i.test(text) &&
       !msg.key.fromMe
     ) {

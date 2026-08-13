@@ -70,7 +70,7 @@ const WORKING_V24_GROUPS = [
     'antilink on|off', 'antilinkick on|off', 'antibug on|off',
   ]],
   ['GROUP', '👥', [
-    'kick @member', 'autogreet on|off', 'antilink on|off',
+    'kick @member', 'autogreet on|off', 'antilink on|off', 'antilinkkick on|off|status',
   ]],
 ];
 

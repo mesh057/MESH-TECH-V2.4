@@ -4,6 +4,7 @@ const path = require("path");
 const { generateWAMessageFromContent } = require("@whiskeysockets/baileys");
 const { isAntideleteEnabled, isPrivateForwardingEnabled, toggleAntidelete, togglePrivateForwarding } = require("../antidelete");
 const autoreactControl = require("../autoreact");
+const antilinkKickControl = require("../antilinkkick");
 const meshAi = require("../ai");
 const { setValue } = require("../system/storage");
 
@@ -206,6 +207,10 @@ async function runCommand({
       return togglePrivateForwarding({ args, reply });
     }
 
+    if (command === "antilinkkick") {
+      return antilinkKickControl.configureAntilinkKick({ m: msg, args, reply, jid: chatId, isGroup });
+    }
+
     // 🔸 MESH AI
     if (command === "ai") {
       return meshAi.run({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
@@ -226,6 +231,7 @@ async function runCommand({
 ┃ Mode: *${global.mode || "public"}*
 ┃ Anti-delete (this chat): *${isAntideleteEnabled(chatId) ? "ON" : "OFF"}*
 ┃ Private forwarding: *${isPrivateForwardingEnabled() ? "ON" : "OFF"}*
+┃ Anti-link kick (this group): *${isGroup && antilinkKickControl.isAntilinkKickEnabled(chatId) ? "ON" : "OFF"}*
 ┃ Auto-react (messages): *${autoreactControl.isAutoreactEnabled() ? "ON" : "OFF"}*
 ┃ Status auto-react: *${statusReact.enabled ? "ON" : "OFF"}*
 ┃ Status emoji: ${statusReact.emoji}
