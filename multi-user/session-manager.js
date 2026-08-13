@@ -58,17 +58,16 @@ class MultiUserSessionManager {
 
     const child = spawn(process.execPath, [this.botEntry], {
       cwd: authDir,
-      env: { ...process.env },
+      // Supply the selected user's number directly to the isolated bot. The
+      // bot treats child-process stdin as non-interactive on Railway.
+      env: { ...process.env, MESH_PAIRING_PHONE_NUMBER: normalized },
       // The original bot keeps using auth_info; running it from this user’s
       // directory makes that relative path unique without editing its code.
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
     record.child = child;
     record.pid = child.pid;
     this.sessions.set(normalized, record);
-    child.stdin.write(`${normalized}\\n`);
-    child.stdin.end();
-
     const consume = (chunk) => {
       const output = String(chunk);
       record.lastOutput = output.trim().slice(-2000);
