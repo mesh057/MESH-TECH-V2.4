@@ -61,6 +61,31 @@ async function main() {
   assert.match(sent.at(-1).payload.text, /MESH V2\.4 Test Group/);
   assert.match(sent.at(-1).payload.text, /2024-03-09 16:00:00 UTC/);
 
+  await handleCommand(conn, message('.antideleteforward off'));
+  assert.strictEqual(antidelete.isPrivateForwardingEnabled(), false,
+    'The dedicated private-forwarding toggle must disable delivery without disabling chat protection.');
+
+  const priorSendCount = sent.length;
+  const suppressed = {
+    key: { remoteJid: chatId, participant: '254700000002@s.whatsapp.net', id: 'suppressed-message', fromMe: false },
+    pushName: 'Tester',
+    messageTimestamp: 1710000000,
+    message: { conversation: 'Do not forward this message' },
+  };
+  antidelete.storeMessage(suppressed);
+  await antidelete.handleMessageRevocation(conn, {
+    key: { remoteJid: chatId, participant: '254700000002@s.whatsapp.net', id: 'suppressed-revoke', fromMe: false },
+    message: { protocolMessage: { type: 0, key: { id: 'suppressed-message' } } },
+  });
+  assert.strictEqual(sent.length, priorSendCount, 'Disabled private forwarding must suppress owner delivery.');
+  assert.strictEqual(antidelete.isAntideleteEnabled(chatId), true, 'The per-chat anti-delete protection must remain enabled.');
+
+  await handleCommand(conn, message('.antideleteforward status'));
+  assert.match(sent.at(-1).payload.text, /DISABLED/);
+
+  await handleCommand(conn, message('.antideleteforward on'));
+  assert.strictEqual(antidelete.isPrivateForwardingEnabled(), true);
+
   await handleCommand(conn, message('.autoreactstatus on'));
   assert.strictEqual(autoreact.getStatusReactionState().enabled, true,
     'The autoreactstatus command must persist enabled status reactions.');

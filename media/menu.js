@@ -30,6 +30,7 @@ const commandGuide = `${header}
 • \`.autorecording on|off\` — show or hide recording presence
 • \`.autogreet on|off\` — group join/leave greetings
 • \`.antidelete on|off|status\` — anti-delete control
+• \`.antideleteforward on|off|status\` — owner private-forwarding control
 
 *GROUP*
 • \`.kick @member\` — remove a group participant when the bot has admin permission
@@ -47,6 +48,7 @@ const automationGuide = `${header}
 • \`.autorecording on|off\`
 • \`.autogreet on|off\` (group only)
 • \`.antidelete on|off|status\`
+• \`.antideleteforward on|off|status\`
 
 All automation controls require the connected bot owner.`;
 

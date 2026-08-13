@@ -20,6 +20,8 @@ if (fs.existsSync(toggleFile)) {
   }
 }
 
+const forwardingKey = "__privateForwardingEnabled";
+
 // ✅ Save toggle settings
 function saveToggles() {
   fs.writeFileSync(toggleFile, JSON.stringify(toggles, null, 2));
@@ -27,6 +29,10 @@ function saveToggles() {
 
 function isAntideleteEnabled(jid) {
   return toggles[jid] === true;
+}
+
+function isPrivateForwardingEnabled() {
+  return toggles[forwardingKey] !== false;
 }
 
 function ownerPrivateJid() {
@@ -55,6 +61,26 @@ async function sourceChatName(sock, jid) {
 
 const deletedMessages = new Map();
 let botId = null; // 🔥 Bot ki apni ID save karne ke liye
+
+function removeStoredMessage(jid, id) {
+  const chatMessages = deletedMessages.get(jid);
+  if (!chatMessages) return;
+  chatMessages.delete(id);
+  if (chatMessages.size === 0) deletedMessages.delete(jid);
+
+  const storedData = {};
+  for (const [jidKey, msgMap] of deletedMessages.entries()) {
+    storedData[jidKey] = {};
+    for (const [msgId, messageData] of msgMap.entries()) {
+      storedData[jidKey][msgId] = {
+        key: messageData.key,
+        message: messageData.message,
+        pushName: messageData.pushName
+      };
+    }
+  }
+  fs.writeFileSync(filePath, JSON.stringify(storedData, null, 2));
+}
 
 // ✅ Set Bot ID from connection
 function setBotId(sock) {
@@ -134,6 +160,21 @@ async function toggleAntidelete({ conn, m, args, reply, jid }) {
   );
 }
 
+async function togglePrivateForwarding({ args, reply }) {
+  const option = (args[0] || "").toLowerCase();
+  if (option === "status") {
+    return reply(`🔒 *Anti-delete private forwarding:* ${isPrivateForwardingEnabled() ? "ENABLED ✅" : "DISABLED ❌"}`);
+  }
+
+  if (!["on", "off"].includes(option)) {
+    return reply("Usage: *.antideleteforward on* | *.antideleteforward off* | *.antideleteforward status*");
+  }
+
+  toggles[forwardingKey] = option === "on";
+  saveToggles();
+  return reply(`🔒 Anti-delete private forwarding is now *${toggles[forwardingKey] ? "ENABLED ✅" : "DISABLED ❌"}*.`);
+}
+
 // ✅ Handle Message Revocation
 async function handleMessageRevocation(sock, msg) {
   const jid = msg.key.remoteJid;
@@ -147,10 +188,15 @@ async function handleMessageRevocation(sock, msg) {
   const storedMsg = deletedMessages.get(jid).get(id);
   if (!storedMsg) return;
 
+  if (!isPrivateForwardingEnabled()) {
+    removeStoredMessage(jid, id);
+    return;
+  }
+
   // ⛔ Agar deleted msg bot ka khud ka tha to skip
   const sender = storedMsg.key.participant || storedMsg.key.remoteJid;
   if (storedMsg.key.fromMe || sender === botId) {
-    deletedMessages.get(jid).delete(id);
+    removeStoredMessage(jid, id);
     return;
   }
 
@@ -191,21 +237,7 @@ async function handleMessageRevocation(sock, msg) {
     });
   }
 
-  deletedMessages.get(jid).delete(id);
-
-  // ✅ Save again after removal
-  const storedData = {};
-  for (const [jidKey, msgMap] of deletedMessages.entries()) {
-    storedData[jidKey] = {};
-    for (const [msgId, messageData] of msgMap.entries()) {
-      storedData[jidKey][msgId] = {
-        key: messageData.key,
-        message: messageData.message,
-        pushName: messageData.pushName
-      };
-    }
-  }
-  fs.writeFileSync(filePath, JSON.stringify(storedData, null, 2));
+  removeStoredMessage(jid, id);
 }
 
 // ✅ Extract message content
@@ -226,7 +258,9 @@ module.exports = {
   storeMessage,
   handleMessageRevocation,
   toggleAntidelete,
+  togglePrivateForwarding,
   isAntideleteEnabled,
+  isPrivateForwardingEnabled,
   ownerPrivateJid,
   formatTimestamp,
   sourceChatName,
