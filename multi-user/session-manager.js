@@ -33,6 +33,38 @@ class MultiUserSessionManager {
     return path.join(this.rootDir, this.normalizePhoneNumber(number));
   }
 
+  listRestorableSessions() {
+    try {
+      return fs.readdirSync(this.rootDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && /^\d{8,15}$/.test(entry.name))
+        .map((entry) => entry.name)
+        .filter((number) => {
+          const credsPath = path.join(this.sessionDir(number), 'auth_info', 'creds.json');
+          try {
+            return Boolean(JSON.parse(fs.readFileSync(credsPath, 'utf8')).registered);
+          } catch {
+            return false;
+          }
+        });
+    } catch (error) {
+      console.error('[mesh-multi-user] Could not inspect stored sessions:', error.message);
+      return [];
+    }
+  }
+
+  async restoreSavedSessions() {
+    const restored = [];
+    for (const number of this.listRestorableSessions()) {
+      try {
+        await this.start(number);
+        restored.push(number);
+      } catch (error) {
+        console.error(`[mesh-multi-user] Could not restore ${number}:`, error.message);
+      }
+    }
+    return restored;
+  }
+
   get(number) {
     return this.sessions.get(this.normalizePhoneNumber(number));
   }

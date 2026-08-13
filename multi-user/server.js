@@ -114,8 +114,17 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-if (require.main === module) {
+async function startServer() {
+  const restored = await manager.restoreSavedSessions();
+  if (restored.length) console.log(`[mesh-multi-user] Restoring ${restored.length} saved WhatsApp session(s).`);
   server.listen(port, '0.0.0.0', () => console.log(`[mesh-multi-user] MESH TECH MD pairing server listening on ${port}`));
 }
 
-module.exports = { server, manager };
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error('[mesh-multi-user] Failed to start pairing server:', error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { server, manager, startServer };
