@@ -18,6 +18,7 @@ const { getValue } = require("./system/storage");
 const { notifyBotEvent } = require("./multi-user/push-notifier");
 const { createV22CommandRuntime } = require("./multi-user/v22-command-runtime");
 const { connectedMessageEnabled, sendConnectedMessage } = require("./multi-user/connected-message");
+const { welcomeFirstInteraction } = require("./multi-user/first-interaction-welcome");
 
 function normalizePhoneNumber(value) {
   return String(value || "").replace(/\D/g, "");
@@ -243,6 +244,17 @@ async function startBot() {
         }
       } catch (err) {
         console.error("❌ AntiBug Error:", err.message || err);
+      }
+    }
+
+    // ✅ First-contact onboarding for linked multi-user sessions.
+    // The per-session settings store remembers each direct-message contact,
+    // so the welcome and command guide are delivered only once per person.
+    if (global.isMultiUserSession && global.v22CommandRuntime) {
+      try {
+        await welcomeFirstInteraction({ runtime: global.v22CommandRuntime, sock, msg });
+      } catch (err) {
+        console.error("❌ First-interaction welcome error:", err.message || err);
       }
     }
 
