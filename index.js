@@ -62,6 +62,48 @@ async function getPairingPhoneNumber() {
   }
 }
 
+const fsExtra = require('fs-extra');
+const path = require('path');
+
+// ✅ Instance Locking & PID Check to prevent ghost processes
+const LOCK_FILE = path.join(__dirname, 'tmp', 'bot.lock');
+fsExtra.ensureDirSync(path.join(__dirname, 'tmp'));
+
+function acquireLock() {
+  if (fsExtra.existsSync(LOCK_FILE)) {
+    const oldPid = parseInt(fsExtra.readFileSync(LOCK_FILE, 'utf8').trim());
+    try {
+      process.kill(oldPid, 0);
+      console.error(`[System] ❌ Another instance of V2.4 is already running (PID ${oldPid}). Exiting to prevent duplicates.`);
+      process.exit(1);
+    } catch (e) {
+      console.warn(`[System] ⚠️ Stale lock found (PID ${oldPid}). Cleaning up.`);
+      fsExtra.unlinkSync(LOCK_FILE);
+    }
+  }
+  fsExtra.writeFileSync(LOCK_FILE, process.pid.toString());
+}
+
+function releaseLock() {
+  try {
+    if (fsExtra.existsSync(LOCK_FILE)) {
+      const pid = parseInt(fsExtra.readFileSync(LOCK_FILE, 'utf8').trim());
+      if (pid === process.pid) fsExtra.unlinkSync(LOCK_FILE);
+    }
+  } catch (e) {}
+}
+
+acquireLock();
+
+// ✅ Graceful shutdown handlers for zero-downtime updates (VPS / Railway)
+['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach((signal) => {
+  process.on(signal, () => {
+    console.log(`[System] Received ${signal}. Shutting down gracefully...`);
+    releaseLock();
+    process.exit(0);
+  });
+});
+
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("auth_info");
   const { version } = await fetchLatestBaileysVersion();

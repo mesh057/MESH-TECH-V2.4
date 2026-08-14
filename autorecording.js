@@ -1,75 +1,39 @@
-// 📁 File: autorecording.js
-const fs = require("fs");
-const path = require("path");
+'use strict';
 
-// 🔢 Clean number from JID
-function getCleanNumber(jid) {
-  return jid ? jid.replace(/\D/g, "") : null;
+let autorecordingScope = 'off'; // p, g, all, off
+
+function isAutorecordingEnabled(isGroup) {
+    if (autorecordingScope === 'all' || autorecordingScope === true) return true;
+    if (autorecordingScope === 'p' && !isGroup) return true;
+    if (autorecordingScope === 'g' && isGroup) return true;
+    return false;
 }
 
-// 🔍 Extract sender number
-function resolveSenderNumber(m, conn) {
-  let senderJid =
-    m.sender ||
-    m.key?.participant ||
-    m.participant ||
-    (m.key?.fromMe && conn?.user?.id) ||
-    m.key?.remoteJid ||
-    m.message?.extendedTextMessage?.contextInfo?.participant;
-
-  if (!senderJid && conn?.decodeJid) {
-    try {
-      senderJid = conn.decodeJid(m?.key?.remoteJid);
-    } catch {
-      senderJid = null;
+function configureAutorecording({ args, reply }) {
+    const val = args[0]?.toLowerCase();
+    if (!val) {
+        return reply(`🎙️ *Auto Recording Status:* ${autorecordingScope.toUpperCase()}\nUsage: .autorecording p / g / all / off`);
     }
-  }
 
-  return getCleanNumber(senderJid);
+    if (val === 'on' || val === 'all') {
+        autorecordingScope = 'all';
+        return reply("✅ *Auto Recording:* ON (ALL CHATS)");
+    } else if (val === 'p' || val === 'private') {
+        autorecordingScope = 'p';
+        return reply("✅ *Auto Recording:* PRIVATE CHATS ONLY (👤)");
+    } else if (val === 'g' || val === 'group') {
+        autorecordingScope = 'g';
+        return reply("✅ *Auto Recording:* GROUPS ONLY (👥)");
+    } else if (val === 'off' || val === 'false') {
+        autorecordingScope = 'off';
+        return reply("❌ *Auto Recording:* OFF");
+    } else {
+        return reply("❌ Invalid scope. Use: .autorecording p / g / all / off");
+    }
 }
 
 module.exports = async function ({ conn, m, reply, args }) {
-  try {
-    const senderNum = resolveSenderNumber(m, conn);
-    if (!senderNum) {
-      return reply(
-`╭━━━〔 ❌ *ERROR* 〕━━━╮
-┃ Unable to detect sender!
-╰━━━━━━━━━━━━━━━━━━━╯`
-      );
-    }
-
-    const toggle = args[0]?.toLowerCase();
-    if (!["on", "off"].includes(toggle)) {
-      return reply(
-`〔 🎙 *AUTO-RECORDING* 〕
-┃ 💡 Usage:
-┃   .autorecording on   → Enable
-┃   .autorecording off  → Disable
-┃ 
-┃ 🎧 Fake recording vibes ✨
-╰━━━━━━━━━━━━━━━━━━━╯`
-      );
-    }
-
-    global.autorecording = toggle === "on";
-
-    return reply(
-`╭〔 🎙 *AUTO-RECORDING* 〕╮
-┃ Status: ${toggle === "on" ? "🟢 ENABLED" : "🔴 DISABLED"}
-┃ 
-┃ 🎧 Creating *fake recording vibes...*
-┃ 💜 Powered by: MESH TECH
-╰━━━━━━━━━━━━━━━━━━━╯`
-    );
-  } catch (err) {
-    console.error("❌ AutoRecording Error:", err.message);
-    return reply(
-`╭〔 💥 *SYSTEM FAILURE* 〕╮
-┃ Error while toggling AutoRecording!
-┃ 
-┃ ⚠️ ${err.message}
-╰━━━━━━━━━━━━━━━━━━━╯`
-    );
-  }
+    return configureAutorecording({ args, reply });
 };
+module.exports.isAutorecordingEnabled = isAutorecordingEnabled;
+module.exports.configureAutorecording = configureAutorecording;
