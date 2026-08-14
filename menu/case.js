@@ -317,6 +317,10 @@ async function runCommand({
     }
 
     // 🔸 individual command files
+    if (command === "pairqr") {
+      const pairQr = require("../commands/pairqr");
+      return await pairQr.execute(conn, msg, args);
+    }
     const filePath = path.join(__dirname, "..", `${command}.js`);
     if (fs.existsSync(filePath)) {
       const commandFile = require(filePath);

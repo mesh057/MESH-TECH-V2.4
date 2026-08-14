@@ -10,6 +10,11 @@ function extractPairingCode(output) {
   return match ? match[1].toUpperCase() : null;
 }
 
+function extractPairingQr(output) {
+  const match = String(output || '').match(/\bPAIRING_QR\s+([^\n\r]+)/i);
+  return match ? match[1].trim() : null;
+}
+
 function extractPairingError(output) {
   const match = String(output || '').match(/\bPAIRING_ERROR\s+([^\n\r]+)/i);
   return match ? match[1].trim().slice(0, 240) : null;
@@ -74,12 +79,12 @@ class MultiUserSessionManager {
   }
 
   list() {
-    return [...this.sessions.values()].map(({ number, status, code, pid, startedAt, lastOutput }) => ({
-      number, status, code: code || null, pid: pid || null, startedAt, lastOutput,
+    return [...this.sessions.values()].map(({ number, status, code, qr, pid, startedAt, lastOutput }) => ({
+      number, status, code: code || null, qr: qr || null, pid: pid || null, startedAt, lastOutput,
     }));
   }
 
-  async start(number) {
+  async start(number, useQr = false) {
     const normalized = this.normalizePhoneNumber(number);
     const existing = this.sessions.get(normalized);
     if (existing && !existing.child.killed) return this.publicSession(existing);
@@ -93,6 +98,7 @@ class MultiUserSessionManager {
       authDir,
       status: 'starting',
       code: null,
+      qr: null,
       error: null,
       startedAt: new Date().toISOString(),
       lastOutput: '',
@@ -109,6 +115,7 @@ class MultiUserSessionManager {
         MESH_PAIRING_PHONE_NUMBER: normalized,
         MESH_MULTI_USER_SESSION_OWNER: normalized,
         MESH_MULTI_USER_SESSION_MODE: 'public',
+        MESH_PAIRING_MODE: useQr ? 'qr' : 'code',
       },
       // The original bot keeps using auth_info; running it from this user’s
       // directory makes that relative path unique without editing its code.
@@ -126,6 +133,12 @@ class MultiUserSessionManager {
         record.code = code;
         record.error = null;
         record.status = 'pairing_code_ready';
+      }
+      const qr = extractPairingQr(record.outputBuffer);
+      if (qr) {
+        record.qr = qr;
+        record.error = null;
+        record.status = 'pairing_qr_ready';
       }
       const pairingError = extractPairingError(record.outputBuffer);
       if (pairingError && !record.code) {
@@ -166,6 +179,7 @@ class MultiUserSessionManager {
       accessToken: record.accessToken,
       status: record.status,
       code: record.code,
+      qr: record.qr,
       error: record.error,
       pid: record.pid,
       authDir: record.authDir,

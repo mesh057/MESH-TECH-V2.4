@@ -122,7 +122,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/request-pairing') {
       if (!allowed(ip)) return json(res, 429, { success: false, error: 'Too many requests. Try again later.' });
       const data = await body(req);
-      const session = await manager.start(data.phoneNumber);
+      const session = await manager.start(data.phoneNumber, data.useQr === true);
       return json(res, 200, { success: true, message: 'Session started. Poll /api/pairing-code for the code.', phoneNumber: session.number, accessToken: session.accessToken });
     }
     if (req.method === 'GET' && url.pathname === '/api/pairing-code') {
@@ -130,7 +130,7 @@ const server = http.createServer(async (req, res) => {
       const token = url.searchParams.get('accessToken');
       const session = manager.get(number);
       if (!session || session.accessToken !== token) return json(res, 403, { success: false, error: 'Invalid or expired session token.' });
-      return json(res, 200, { success: true, status: session.status, code: session.code, error: session.error || null, phoneNumber: session.number, pid: session.pid });
+      return json(res, 200, { success: true, status: session.status, code: session.code, qr: session.qr, error: session.error || null, phoneNumber: session.number, pid: session.pid });
     }
     if (req.method === 'POST' && url.pathname === '/api/stop') {
       const data = await body(req);

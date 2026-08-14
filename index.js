@@ -194,7 +194,11 @@ async function startBot() {
     sock.ev.on("creds.update", saveCreds);
 
     sock.ev.on("connection.update", async (update) => {
-      const { connection, lastDisconnect } = update;
+      const { connection, lastDisconnect, qr } = update;
+
+      if (qr && process.env.MESH_PAIRING_MODE === "qr") {
+        console.log(`PAIRING_QR ${qr}`);
+      }
 
       if (connection === "open") {  
         console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
@@ -418,23 +422,27 @@ async function startBot() {
     }
   });
 
-  // ✅ Pairing code
+  // ✅ Pairing logic
   if (!state.creds?.registered) {
     const phoneNumber = await getPairingPhoneNumber();
     if (!phoneNumber) return;
 
-    try {
-      const code = await requestPairingCodeWithRetries(sock, phoneNumber);
-      console.log("\n🔗 Pair this device using this code in WhatsApp:\n");
-      console.log("   " + code + "\n");
-      // Machine-readable marker for the multi-user pairing server. Keep this
-      // separate from prose so normal words are never mistaken for a code.
-      console.log(`PAIRING_CODE ${code}`);
-      console.log("Go to WhatsApp → Linked Devices → Link with code.");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error("❌ Could not request WhatsApp pairing code:", message);
-      console.error(`PAIRING_ERROR ${message}`);
+    if (process.env.MESH_PAIRING_MODE === "qr") {
+      console.log("📡 QR Mode Active. Waiting for QR code generation...");
+    } else {
+      try {
+        const code = await requestPairingCodeWithRetries(sock, phoneNumber);
+        console.log("\n🔗 Pair this device using this code in WhatsApp:\n");
+        console.log("   " + code + "\n");
+        // Machine-readable marker for the multi-user pairing server. Keep this
+        // separate from prose so normal words are never mistaken for a code.
+        console.log(`PAIRING_CODE ${code}`);
+        console.log("Go to WhatsApp → Linked Devices → Link with code.");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("❌ Could not request WhatsApp pairing code:", message);
+        console.error(`PAIRING_ERROR ${message}`);
+      }
     }
   }
 }
