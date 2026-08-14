@@ -504,6 +504,11 @@ async function startBot() {
       }
     }
   }
+} catch (error) {
+  console.error("❌ Critical error in startBot:", error);
+  isConnecting = false;
+  setTimeout(() => startBot(), 5000);
+}
 }
 
 startBot();
