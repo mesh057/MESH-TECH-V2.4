@@ -266,14 +266,10 @@ async function startBot() {
       console.error("❌ AntiDelete Error:", err.message);
     }
 
-    // ✅ AutoTyping
+    // ✅ AutoTyping (Non-blocking)
     if (global.autotyping && jid !== "status@broadcast") {  
-      try {  
-        await sock.sendPresenceUpdate('composing', jid);  
-        await new Promise(res => setTimeout(res, 2000));  
-      } catch (err) {  
-        console.error("❌ AutoTyping Error:", err.message);  
-      }  
+      // Optimization: Do not await presence updates to avoid blocking the message loop
+      sock.sendPresenceUpdate('composing', jid).catch(err => console.error("❌ AutoTyping Error:", err.message));
     }  
 
     // ✅ AutoReact

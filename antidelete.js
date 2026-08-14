@@ -106,19 +106,24 @@ function storeMessage(msg) {
 
   deletedMessages.get(jid).set(id, msg);
 
-  // ✅ Save current messages to file
-  const storedData = {};
-  for (const [jidKey, msgMap] of deletedMessages.entries()) {
-    storedData[jidKey] = {};
-    for (const [msgId, messageData] of msgMap.entries()) {
-      storedData[jidKey][msgId] = {
-        key: messageData.key,
-        message: messageData.message,
-        pushName: messageData.pushName
-      };
+  // Optimization: Only save to disk periodically (every 20 messages) to reduce I/O lag in busy groups
+  global.deleteSaveCounter = (global.deleteSaveCounter || 0) + 1;
+  if (global.deleteSaveCounter % 20 === 0) {
+    const storedData = {};
+    for (const [jidKey, msgMap] of deletedMessages.entries()) {
+      storedData[jidKey] = {};
+      for (const [msgId, messageData] of msgMap.entries()) {
+        storedData[jidKey][msgId] = {
+          key: messageData.key,
+          message: messageData.message,
+          pushName: messageData.pushName
+        };
+      }
     }
+    fs.writeFile(filePath, JSON.stringify(storedData, null, 2), (err) => {
+      if (err) console.error("❌ AntiDelete Save Error:", err.message);
+    });
   }
-  fs.writeFileSync(filePath, JSON.stringify(storedData, null, 2));
 }
 
 // ✅ TOGGLE Command
