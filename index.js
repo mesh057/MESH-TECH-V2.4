@@ -223,27 +223,44 @@ async function startBot() {
         }
         void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
 
-        // ✅ Auto-send Session ID to owner DM on successful connection
+        // ✅ BWM XMD Style Progressive Countdown & Status Edited Session Delivery
         setTimeout(async () => {
             try {
                 const credsPath = path.join(__dirname, "auth_info", "creds.json");
                 if (fsExtra.existsSync(credsPath)) {
+                    const ownerJid = jidNormalizedUser(sock.user.id);
+                    
+                    // Send initial countdown message
+                    const initialMsg = await sock.sendMessage(ownerJid, { text: '🔄 *Generating Session ID...*\n⏳ Step 1/10: Initializing secure storage...' });
+                    const key = initialMsg?.key;
+
+                    for (let i = 2; i <= 10; i++) {
+                        await new Promise(r => setTimeout(r, 600));
+                        const percentage = i * 10;
+                        let stepText = `🔄 *Generating Session ID...*\n⏳ Step ${i}/10: Syncing credentials (${percentage}%)...`;
+                        if (i === 10) stepText = `✅ *Session Generated Successfully!*`;
+                        
+                        if (key) {
+                            await sock.sendMessage(ownerJid, { text: stepText, edit: key }).catch(() => {
+                                // Fallback if edit fails
+                                sock.sendMessage(ownerJid, { text: stepText });
+                            });
+                        }
+                    }
+
                     const creds = fsExtra.readFileSync(credsPath, "utf-8");
                     const base64 = Buffer.from(creds).toString("base64");
                     const sessionId = `MESH-TECH;;;${base64}`;
-                    const ownerJid = jidNormalizedUser(sock.user.id);
-
-                    const notice = `╭━━━〔 *AUTO SESSION DELIVERY* 〕━━━┈⊷\n` +
-                                   `┃ ✅ *Bot Connected Successfully!*\n` +
+                    const notice = `╭━━━〔 *MESH-TECH CLOUD SESSION* 〕━━━┈⊷\n` +
+                                   `┃ ✅ *Connection Stabilized!*\n` +
                                    `┃ \n` +
-                                   `┃ 🔑 *Your SESSION_ID is below.*\n` +
-                                   `┃ Save this string to restore your session anytime via your Cloud Dashboard without re-pairing!\n` +
+                                   `┃ 🔑 *Your SESSION_ID:* \n` +
                                    `╰━━━━━━━━━━━━━━━━━━━━━━┈⊷`;
                     await sock.sendMessage(ownerJid, { text: notice });
                     await sock.sendMessage(ownerJid, { text: sessionId });
                 }
             } catch (e) {
-                console.error("❌ Auto-session delivery failed:", e.message);
+                console.error("❌ Progressive session delivery failed:", e.message);
             }
         }, 5000);
       }  

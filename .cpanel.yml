@@ -1,0 +1,9 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home3/tunupublsh/MESH-TECH-V2.4
+    - /bin/cp -R . $DEPLOYPATH
+    - cd $DEPLOYPATH
+    - npm install
+    - pm2 restart mesh-v24 || pm2 start index.js --name mesh-v24
+    - pm2 save
