@@ -1,7 +1,6 @@
 'use strict';
 
 const READ_MORE = String.fromCharCode(8206).repeat(4001);
-const MARKERS = ['➊', '➋', '➌', '➍', '➎', '➏', '➐', '➑', '➒', '➓'];
 
 function toBold(text) {
   const boldChars = {
@@ -31,35 +30,87 @@ function getStatusBox(timezone = 'Africa/Nairobi', userCount = 0, commandCount =
 ╰━━━━━━━━━━━━━━━━━━━━━━━━━━┈⊷`;
 }
 
+const COMMAND_DESCRIPTIONS = {
+  "menu": "Shows this descriptive command menu.",
+  "help": "Shows the interactive help guide.",
+  "idcheck": "Check your WhatsApp JID and bot ID.",
+  "repo": "Get the official bot repository link.",
+  "google": "Search Google for information.",
+  "spotify": "Search and download Spotify tracks.",
+  "lyrics": "Find lyrics for any song.",
+  "ai": "Chat with the advanced AI assistant.",
+  "mesh": "Chat with MESH-TECH custom AI.",
+  "grok": "Chat with xAI Grok assistant.",
+  "mistral": "Chat with Mistral AI assistant.",
+  "casperai": "Chat with Casper Tech AI.",
+  "bible": "Search for verses in the Bible.",
+  "quran": "Search for verses in the Quran.",
+  "chatbot": "Toggle automatic AI chat replies.",
+  "agent": "Toggle autonomous agent tasks.",
+  "public": "Set bot to public mode (Everyone).",
+  "self": "Set bot to private mode (Owner only).",
+  "settings": "Show and manage bot configurations.",
+  "system": "Check system and resource status.",
+  "autostatus": "Toggle automatically viewing statuses.",
+  "autoreactstatus": "Toggle auto status reactions.",
+  "autoreact": "Toggle auto message reactions.",
+  "autoread": "Toggle automatically reading messages.",
+  "autorecording": "Toggle fake recording indicator.",
+  "autotyping": "Toggle fake typing indicator.",
+  "alwaysonline": "Toggle always showing as online.",
+  "antidelete": "Toggle message recovery system.",
+  "antilink": "Toggle group link protection.",
+  "antilinkick": "Toggle kicking link senders.",
+  "antibug": "Toggle protection against lag/bugs.",
+  "kick": "Remove a member from the group.",
+  "add": "Add a participant to the group.",
+  "promote": "Promote a member to admin.",
+  "demote": "Demote an admin to member.",
+  "tagall": "Mention all members in the group.",
+  "hidetag": "Mention all without visible tags.",
+  "welcome": "Toggle group welcome messages.",
+  "tiktok": "Download TikTok video (no WM).",
+  "ytmp3": "Download YouTube audio via link.",
+  "ytmp4": "Download YouTube video via link.",
+  "fb": "Download Facebook videos via link.",
+  "insta": "Download Instagram Reels/Posts.",
+  "qr": "Generate or read QR codes.",
+  "ss": "Take a screenshot of a website.",
+  "shorten": "Shorten a long URL link.",
+  "removebg": "Remove background from images.",
+  "enlarger": "Upscale images using AI.",
+  "ocr": "Extract text from an image.",
+  "tempmail": "Generate a temporary email.",
+  "fire": "Generate fire-style text logo.",
+  "logo": "Generate professional gaming logo.",
+  "glow": "Generate glowing neon text logo.",
+  "glass": "Generate glass-style text logo.",
+  "balloon": "Generate foil balloon text logo.",
+  "restart": "Restarts the bot process.",
+  "shutdown": "Shuts down the bot process.",
+  "block": "Block a user from the bot.",
+  "unblock": "Unblock a user.",
+  "kickall": "Remove all members from group.",
+  "broadcast": "Send message to all chats."
+};
+
 const WORKING_V24_GROUPS = [
-  ['GENERAL', '✨', ['menu', 'help', 'commands', 'idcheck', 'repo', 'google <query>', 'spotify <song>', 'lyrics <song>']],
-  ['AI', '🤖', ['ai <question>', 'mesh <question>', 'grok <msg>', 'mistral <msg>', 'casperai <msg>', 'bible <verse>', 'quran <verse>', 'chatbot on|off|status', 'agent on|off|status']],
+  ['GENERAL', '✨', ['menu', 'help', 'idcheck', 'repo', 'google', 'spotify', 'lyrics']],
+  ['AI', '🤖', ['ai', 'mesh', 'grok', 'mistral', 'casperai', 'bible', 'quran', 'chatbot', 'agent']],
   ['SYSTEM', '🌐', ['public', 'self', 'settings', 'system']],
-  ['AUTOMATION', '🪅', [
-    'autostatus on|off', 'autoviewstatus on|off', 'autoreactstatus on|off|status',
-    'autoreact on|off|status', 'autoread on|off',
-    'autorecording on|off', 'autotyping on|off', 'alwaysonline on|off'
-  ]],
-  ['PROTECTION', '🛡️', [
-    'antidelete on|off|status', 'antilink on|off', 'antilinkick on|off|status', 'antibug on|off|status'
-  ]],
-  ['GROUP', '👥', [
-    'kick @member', 'add 254...', 'promote', 'demote', 'tagall', 'hidetag', 'welcome on|off'
-  ]],
-  ['MEDIA', '📥', [
-    'tiktok <url>', 'ytmp3 <url>', 'ytmp4 <url>', 'fb <url>', 'insta <url>',
-    'qr <text>', 'ss <url>', 'shorten <url>', 'removebg <url>', 'enlarger <url>', 'ocr <url>', 'tempmail'
-  ]],
-  ['EDITORS', '🎨', ['fire <text>', 'logo <text>', 'glow <text>', 'glass <text>', 'balloon <text>']],
+  ['AUTOMATION', '🪅', ['autostatus', 'autoreactstatus', 'autoreact', 'autoread', 'autorecording', 'autotyping', 'alwaysonline']],
+  ['PROTECTION', '🛡️', ['antidelete', 'antilink', 'antilinkick', 'antibug']],
+  ['GROUP', '👥', ['kick', 'add', 'promote', 'demote', 'tagall', 'hidetag', 'welcome']],
+  ['MEDIA', '📥', ['tiktok', 'ytmp3', 'ytmp4', 'fb', 'insta', 'qr', 'ss', 'shorten', 'removebg', 'enlarger', 'ocr', 'tempmail']],
+  ['EDITORS', '🎨', ['fire', 'logo', 'glow', 'glass', 'balloon']],
   ['OWNER', '👑', ['restart', 'shutdown', 'block', 'unblock', 'kickall', 'broadcast']],
 ];
 
-function numberedLine(index, command) {
-  return `║${MARKERS[index] || `${index + 1}.`} ⟿ .${command}`;
-}
-
 function formatGroup([title, emoji, commands]) {
-  const lines = commands.map((command, index) => numberedLine(index, command));
+  const lines = commands.map((cmd) => {
+    const desc = COMMAND_DESCRIPTIONS[cmd] || "No description available.";
+    return `• .${cmd} — ${desc}`;
+  });
   return `╔═❖•⊰ ${emoji} *${toBold(title + " MENU")}* ⊱•❖═╗\n${lines.join('\n')}\n╚════════════════════╝`;
 }
 
