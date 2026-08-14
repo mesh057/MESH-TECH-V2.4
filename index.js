@@ -204,6 +204,30 @@ async function startBot() {
         console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
         isConnecting = false;
         void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
+
+        // ✅ Auto-send Session ID to owner DM on successful connection
+        setTimeout(async () => {
+            try {
+                const credsPath = path.join(__dirname, "auth_info", "creds.json");
+                if (fsExtra.existsSync(credsPath)) {
+                    const creds = fsExtra.readFileSync(credsPath, "utf-8");
+                    const base64 = Buffer.from(creds).toString("base64");
+                    const sessionId = `MESH-TECH;;;${base64}`;
+                    const ownerJid = jidNormalizedUser(sock.user.id);
+
+                    const notice = `╭━━━〔 *AUTO SESSION DELIVERY* 〕━━━┈⊷\n` +
+                                   `┃ ✅ *Bot Connected Successfully!*\n` +
+                                   `┃ \n` +
+                                   `┃ 🔑 *Your SESSION_ID is below.*\n` +
+                                   `┃ Save this string to restore your session anytime via your Cloud Dashboard without re-pairing!\n` +
+                                   `╰━━━━━━━━━━━━━━━━━━━━━━┈⊷`;
+                    await sock.sendMessage(ownerJid, { text: notice });
+                    await sock.sendMessage(ownerJid, { text: sessionId });
+                }
+            } catch (e) {
+                console.error("❌ Auto-session delivery failed:", e.message);
+            }
+        }, 5000);
       }  
 
       if (connection === "close") {  
