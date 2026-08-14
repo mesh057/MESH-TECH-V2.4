@@ -68,7 +68,12 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const ip = req.socket.remoteAddress || 'unknown';
-    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/pairing.html')) {
+    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/dashboard' || url.pathname === '/dashboard.html')) {
+      const page = fs.readFileSync(path.join(__dirname, 'dashboard.html'));
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(page);
+    }
+    if (req.method === 'GET' && url.pathname === '/pairing.html') {
       const page = fs.readFileSync(path.join(__dirname, 'pairing.html'));
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(page);
@@ -124,6 +129,48 @@ const server = http.createServer(async (req, res) => {
       const data = await body(req);
       const session = await manager.start(data.phoneNumber, data.useQr === true);
       return json(res, 200, { success: true, message: 'Session started. Poll /api/pairing-code for the code.', phoneNumber: session.number, accessToken: session.accessToken });
+    }
+    if (req.method === 'POST' && url.pathname === '/api/restore-session') {
+      if (!allowed(ip)) return json(res, 429, { success: false, error: 'Too many requests. Try again later.' });
+      const data = await body(req);
+      const phoneNumber = String(data.phoneNumber || '').replace(/\D/g, '');
+      const sessionIdBase64 = String(data.sessionId || '').trim();
+      const ownerNumber = String(data.ownerNumber || phoneNumber).trim();
+
+      if (!phoneNumber || !sessionIdBase64) {
+        return json(res, 400, { success: false, error: 'Phone number and session ID are required.' });
+      }
+
+      const authDir = path.join(manager.sessionDir(phoneNumber), 'auth_info');
+      fs.mkdirSync(authDir, { recursive: true });
+
+      // Clean base64 if prefixed or raw
+      let rawJson = sessionIdBase64;
+      if (!sessionIdBase64.startsWith('{')) {
+        try {
+          // If it has a prefix like MESH_TECH_ remove it or decode base64
+          const cleanB64 = sessionIdBase64.replace(/^MESH_TECH_/, '');
+          rawJson = Buffer.from(cleanB64, 'base64').toString('utf8');
+        } catch (e) {
+          // fallback if it's plain text json or direct zip/multi-file
+          rawJson = sessionIdBase64;
+        }
+      }
+
+      try {
+        const parsed = JSON.parse(rawJson);
+        // If it's a map or multi-file creds object
+        for (const [fileName, content] of Object.entries(parsed)) {
+          fs.writeFileSync(path.join(authDir, fileName), typeof content === 'string' ? content : JSON.stringify(content, null, 2));
+        }
+      } catch (e) {
+        // If it's a single creds.json content
+        fs.writeFileSync(path.join(authDir, 'creds.json'), rawJson);
+      }
+
+      // Start the bot session
+      const session = await manager.start(phoneNumber);
+      return json(res, 200, { success: true, message: 'Session restored successfully!', phoneNumber });
     }
     if (req.method === 'GET' && url.pathname === '/api/pairing-code') {
       const number = url.searchParams.get('phoneNumber');
