@@ -1,85 +1,57 @@
 'use strict';
 
-// Preserved V2.2 drop-down presentation. Only the restored V2.4 command
-// inventory below is changed; the box, marker, and category decorations stay
-// in the V2.2 format.
-const READ_MORE = '';
+const READ_MORE = String.fromCharCode(8206).repeat(4001);
+const MARKERS = ['➊', '➋', '➌', '➍', '➎', '➏', '➐', '➑', '➒', '➓'];
 
-function getDateTime(timezone = 'Africa/Nairobi') {
-  const now = new Date();
-  const date = new Intl.DateTimeFormat('en-GB', {
-    timeZone: timezone,
-    day: '2-digit', month: 'short', year: 'numeric',
-  }).format(now).toUpperCase();
-  const time = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: true,
-  }).format(now);
-  const hour = Number(new Intl.DateTimeFormat('en-GB', {
-    timeZone: timezone, hour: '2-digit', hour12: false,
-  }).format(now));
-  let greeting = '🌙 Good Night';
-  if (hour >= 5 && hour < 12) greeting = '🌅 Good Morning';
-  else if (hour >= 12 && hour < 17) greeting = '☀️ Good Afternoon';
-  else if (hour >= 17 && hour < 21) greeting = '🌆 Good Evening';
-  return { date, time, greeting };
-}
-
-function ownerNumber() {
-  const owner = Array.isArray(global.owner) ? global.owner[0] : global.owner;
-  return String(owner || global.ownerNumber || 'Not linked').replace(/@s\.whatsapp\.net$/, '');
+function toBold(text) {
+  const boldChars = {
+    'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵', 'i': '𝗶', 'j': '𝗷', 'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝗾', 'r': '𝗿', 's': '𝘀', 't': '𝘁', 'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
+    'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛', 'I': '𝗜', 'J': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤', 'R': '𝗥', 'S': '𝗦', 'T': '𝗧', 'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭',
+    '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'
+  };
+  return text.split('').map(c => boldChars[c] || c).join('');
 }
 
 function getStatusBox(timezone = 'Africa/Nairobi', userCount = 0, commandCount = 0) {
-  const { date, time, greeting } = getDateTime(timezone);
-  const uptimeSec = Math.floor(process.uptime());
-  const hours = Math.floor(uptimeSec / 3600);
-  const minutes = Math.floor((uptimeSec % 3600) / 60);
-  const seconds = uptimeSec % 60;
-  return `
-╭━━━ *𝗠𝗘𝗦𝗛-𝗧𝗘𝗖𝗛 𝗠𝗗 𝗕𝗢𝗧* ━━━╮
-┃ ${greeting}
-┃ 🔥 𝗠𝗼𝗱𝗲: ${String(global.mode || 'public').toUpperCase()}|FULL POWER
-┃ 💀 𝗣𝗿𝗼𝘁𝗼𝗰𝗼𝗹: PHANTOM CORE
-┃ 👑 𝗢𝘄𝗻𝗲𝗿: 𝕄𝔼𝕊ℍ
-┃ 📞 𝗡𝘂𝗺𝗯𝗲𝗿: ${ownerNumber()}
-┃ ⚙️ 𝗩𝗲𝗿𝘀𝗶𝗼𝗻: v2.4 [RESTORED CORE]
-┃ ⏳ 𝗨𝗽𝘁𝗶𝗺𝗲: ${hours}h ${minutes}m ${seconds}s
-┃ 📅 𝗗𝗮𝘁𝗲: ${date}
-┃ 🕒 𝗧𝗶𝗺𝗲: ${time}
-┃ 📌 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀: ${commandCount} 𝗟𝗼𝗮𝗱𝗲𝗱
-┃ 👥 𝗨𝘀𝗲𝗿𝘀: ${userCount} Active (𝗿𝗲𝗮𝗹-𝘁𝗶𝗺𝗲)
-┃ 🤖 𝗕𝗼𝘁𝘀 𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱: 1 𝗟𝗶𝘃𝗲
-	┃ 📱 𝗗𝗲𝘃𝗶𝗰𝗲: ANDROID-CORE
-	┃ 🧠 RAM: ${Math.floor(Math.random() * (95 - 55 + 1)) + 55}/128 GB
-	╰━━━━━━━━━━━━━━━━━━╯
-`;
-}
+  const date = new Date().toLocaleDateString('en-GB', { timeZone: timezone });
+  const time = new Date().toLocaleTimeString('en-GB', { timeZone: timezone, hour12: true });
+  const uptime = process.uptime();
+  const hours = Math.floor(uptime / 3600);
+  const minutes = Math.floor((uptime % 3600) / 60);
+  const ram = `${Math.floor(Math.random() * 60) + 40}/128 GB`;
 
-const MARKERS = ['➊', '➋', '➌', '➍', '➎', '➏', '➐', '➑', '➒', '➓'];
+  return `╭━━━〔 ${toBold("PHANTOM CORE v2.4")} 〕━━━┈⊷
+┃ 👑 *Owner:* MESH-TECH
+┃ 🚀 *Uptime:* ${hours}h ${minutes}m
+┃ 🧠 *RAM:* ${ram}
+┃ 👥 *Users:* ${userCount}
+┃ ⚡ *Commands:* ${commandCount}
+┃ 📅 *Date:* ${date}
+┃ 🕒 *Time:* ${time}
+╰━━━━━━━━━━━━━━━━━━━━━━━━━━┈⊷`;
+}
 
 const WORKING_V24_GROUPS = [
   ['GENERAL', '✨', ['menu', 'help', 'commands', 'idcheck', 'repo', 'google <query>', 'spotify <song>', 'lyrics <song>']],
-  ['AI', '🤖', ['ai <question>', 'mesh <question>', 'grok <msg>', 'mistral <msg>', 'casperai <msg>', 'chatbot on|off|status', 'agent on|off|status', 'task <goal>', 'tasks']],
-  ['SYSTEM', '🌐', ['public', 'self', 'settings']],
+  ['AI', '🤖', ['ai <question>', 'mesh <question>', 'grok <msg>', 'mistral <msg>', 'casperai <msg>', 'bible <verse>', 'quran <verse>', 'chatbot on|off|status', 'agent on|off|status']],
+  ['SYSTEM', '🌐', ['public', 'self', 'settings', 'system']],
   ['AUTOMATION', '🪅', [
     'autostatus on|off', 'autoviewstatus on|off', 'autoreactstatus on|off|status',
-    'autoreactstatus emoji 💜', 'autoreact on|off|status', 'autoread on|off',
-    'autorecording on|off', 'autotyping on|off', 'autogreet on|off',
+    'autoreact on|off|status', 'autoread on|off',
+    'autorecording on|off', 'autotyping on|off', 'alwaysonline on|off'
   ]],
   ['PROTECTION', '🛡️', [
-    'antidelete on|off|status', 'antideleteforward on|off|status',
-    'antilink on|off', 'antilinkick on|off|status', 'antibug on|off|status',
-    'protectionlog on|off|status',
+    'antidelete on|off|status', 'antilink on|off', 'antilinkick on|off|status', 'antibug on|off|status'
   ]],
   ['GROUP', '👥', [
-    'kick @member', 'autogreet on|off', 'antilink on|off',
-    'antilinkkick on|off|status', 'antilinkkick warning <message>',
-    'antilinkkick strikes 3|clear',
+    'kick @member', 'add 254...', 'promote', 'demote', 'tagall', 'hidetag', 'welcome on|off'
   ]],
   ['MEDIA', '📥', [
     'tiktok <url>', 'ytmp3 <url>', 'ytmp4 <url>', 'fb <url>', 'insta <url>',
-    'qr <text>', 'ss <url>', 'shorten <url>'
+    'qr <text>', 'ss <url>', 'shorten <url>', 'removebg <url>', 'enlarger <url>', 'ocr <url>', 'tempmail'
   ]],
+  ['EDITORS', '🎨', ['fire <text>', 'logo <text>', 'glow <text>', 'glass <text>', 'balloon <text>']],
+  ['OWNER', '👑', ['restart', 'shutdown', 'block', 'unblock', 'kickall', 'broadcast']],
 ];
 
 function numberedLine(index, command) {
@@ -88,7 +60,7 @@ function numberedLine(index, command) {
 
 function formatGroup([title, emoji, commands]) {
   const lines = commands.map((command, index) => numberedLine(index, command));
-  return `╔═❖•⊰ ${emoji} *${title} MENU* ⊱•❖═╗\n${lines.join('\n')}\n╚════════════════════╝`;
+  return `╔═❖•⊰ ${emoji} *${toBold(title + " MENU")}* ⊱•❖═╗\n${lines.join('\n')}\n╚════════════════════╝`;
 }
 
 function renderMenu(groups = WORKING_V24_GROUPS) {
@@ -96,7 +68,7 @@ function renderMenu(groups = WORKING_V24_GROUPS) {
   const userCount = Number(global.activeUserCount || 0);
   const sections = groups.map(formatGroup).join('\n\n');
   return `${getStatusBox('Africa/Nairobi', userCount, commandCount)}
-╔═❖•⊰ *𝗖𝗢𝗠𝗠𝗔𝗡𝗗 𝗠𝗘𝗡𝗨* ⊱•❖═╗
+╔═❖•⊰ *${toBold("COMMAND MENU")}* ⊱•❖═╗
 ║୧⍤⃝💐 𝗔𝗹𝗹 𝗹𝗼𝗮𝗱𝗲𝗱 𝗰𝗼𝗺𝗺𝗮𝗻𝗱𝘀
 ╚═══════════════════╝
 ${READ_MORE}
@@ -105,17 +77,12 @@ ${sections}
 *『 𝗠𝗘𝗦𝗛-𝗧𝗘𝗖𝗛 𝗠𝗗 』*`;
 }
 
-const commandGuide = renderMenu();
-const automationGuide = renderMenu(WORKING_V24_GROUPS.filter(([title]) => ['AUTOMATION', 'PROTECTION'].includes(title)));
-const aiGuide = renderMenu(WORKING_V24_GROUPS.filter(([title]) => title === 'AI'));
-const groupGuide = renderMenu(WORKING_V24_GROUPS.filter(([title]) => title === 'GROUP'));
-
 module.exports = {
-  aimenu: aiGuide,
-  automenu: automationGuide,
-  groupmenu: groupGuide,
-  menu: commandGuide,
-  ownermenu: automationGuide,
+  aimenu: renderMenu(WORKING_V24_GROUPS.filter(([title]) => title === 'AI')),
+  automenu: renderMenu(WORKING_V24_GROUPS.filter(([title]) => ['AUTOMATION', 'PROTECTION'].includes(title))),
+  groupmenu: renderMenu(WORKING_V24_GROUPS.filter(([title]) => title === 'GROUP')),
+  menu: renderMenu(),
+  ownermenu: renderMenu(WORKING_V24_GROUPS.filter(([title]) => title === 'OWNER')),
   getStatusBox,
   renderMenu,
 };

@@ -172,6 +172,36 @@ async function xcasperHandler({ conn, m, args, command, jid, reply }) {
                 break;
             }
 
+            case 'fire': {
+                if (!query) return reply('❌ Provide text!');
+                await conn.sendMessage(jid, { image: { url: `${BASE_URL}/fire-text?text=${encodeURIComponent(query)}` }, caption: '🔥 *Fire Text*' }, { quoted: m });
+                break;
+            }
+
+            case 'logo': {
+                if (!query) return reply('❌ Provide text!');
+                await conn.sendMessage(jid, { image: { url: `${BASE_URL}/game-logo?text=${encodeURIComponent(query)}` }, caption: '🎮 *Gaming Logo*' }, { quoted: m });
+                break;
+            }
+
+            case 'glass': {
+                if (!query) return reply('❌ Provide text!');
+                await conn.sendMessage(jid, { image: { url: `${BASE_URL}/foggy-glass?text=${encodeURIComponent(query)}` }, caption: '🔮 *Glass Text*' }, { quoted: m });
+                break;
+            }
+
+            case 'balloon': {
+                if (!query) return reply('❌ Provide text!');
+                await conn.sendMessage(jid, { image: { url: `${BASE_URL}/foil-blallon?text=${encodeURIComponent(query)}` }, caption: '🎈 *Balloon Text*' }, { quoted: m });
+                break;
+            }
+
+            case 'glow': {
+                if (!query) return reply('❌ Provide text!');
+                await conn.sendMessage(jid, { image: { url: `${BASE_URL}/glow-chrome?text=${encodeURIComponent(query)}` }, caption: '✨ *Glow Text*' }, { quoted: m });
+                break;
+            }
+
             default:
                 break;
         }
