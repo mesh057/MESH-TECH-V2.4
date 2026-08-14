@@ -266,7 +266,8 @@ async function runCommand({
     const casperCommands = [
         'tiktok', 'tiktok2', 'tiktok3', 'yt', 'ytmp3', 'ytmp4', 'fb', 'ig', 'insta',
         'google', 'spotify', 'lyrics', 'grok', 'mistral', 'casperai', 'bible', 'quran',
-        'removebg', 'enlarger', 'colorize', 'ocr', 'tempmail', 'quote', 'joke', 'shorten', 'qr', 'ss', 'screenshot'
+        'removebg', 'enlarger', 'colorize', 'ocr', 'tempmail', 'quote', 'joke', 'shorten', 'qr', 'ss', 'screenshot',
+        'fire', 'logo', 'glass', 'balloon', 'glow'
     ];
     if (casperCommands.includes(command)) {
         const xcasper = require('../xcasper');

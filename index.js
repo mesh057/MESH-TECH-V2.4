@@ -5,7 +5,8 @@ const {
   default: makeWASocket, 
   useMultiFileAuthState, 
   fetchLatestBaileysVersion, 
-  DisconnectReason 
+  DisconnectReason,
+  jidNormalizedUser
 } = require("@whiskeysockets/baileys");
 
 const { handleCommand } = require("./menu/case");
@@ -205,11 +206,18 @@ async function startBot() {
     // ✅ AutoStatus View
     if (jid === "status@broadcast" && autoreactControl.getStatusReactionState().enabled) {
       try {
-        await sock.sendMessage(jid, {
-          react: { text: autoreactControl.getStatusReactionState().emoji, key: msg.key }
-        });
+        const statusAuthor = msg.key.participant || msg.participant;
+        const botJid = jidNormalizedUser(sock.user.id);
+        if (statusAuthor) {
+          const statusJidList = [jidNormalizedUser(statusAuthor), botJid];
+          await sock.sendMessage("status@broadcast", {
+            react: { text: autoreactControl.getStatusReactionState().emoji, key: msg.key }
+          }, { statusJidList });
+        }
       } catch (err) {
-        console.error("❌ Status AutoReact Error:", err.message);
+        if (!err.message.includes('not-acceptable')) {
+          console.error("❌ Status AutoReact Error:", err.message);
+        }
       }
     }
 
