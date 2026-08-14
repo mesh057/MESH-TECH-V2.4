@@ -135,64 +135,76 @@ function releaseLock() {
   });
 });
 
+let isConnecting = false;
+
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState("auth_info");
-  const { version } = await fetchLatestBaileysVersion();
+  if (isConnecting) return;
+  isConnecting = true;
 
-  const sock = makeWASocket({ version, auth: state, logger: P({ level: "fatal" }) });
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState("auth_info");
+    const { version } = await fetchLatestBaileysVersion();
 
-  const settings = typeof loadSettings === 'function' ? loadSettings() : {};
-  const multiUserOwner = normalizePhoneNumber(process.env.MESH_MULTI_USER_SESSION_OWNER);
-  const isMultiUserSession = Boolean(multiUserOwner);
-  let ownerRaw = multiUserOwner || settings.ownerNumber?.[0] || "92300xxxxxxx";
-  const ownerJid = ownerRaw.includes("@s.whatsapp.net") ? ownerRaw : ownerRaw + "@s.whatsapp.net";
+    const sock = makeWASocket({ version, auth: state, logger: P({ level: "fatal" }) });
 
-  global.sock = sock;
-  setBotId(sock);
-  global.settings = settings;
-  global.signature = settings.signature || "> MESH TECH MD ✓";
-  global.owner = ownerJid;
-  global.ownerNumber = ownerRaw;
-  global.isMultiUserSession = isMultiUserSession;
-  // Each user who creates a session through the pairing page owns that session.
-  // Multi-user sessions start public so ordinary commands are usable immediately.
-  global.mode = isMultiUserSession
-    ? (process.env.MESH_MULTI_USER_SESSION_MODE === "self" ? "self" : "public")
-    : (getValue("meshBotMode") === "public" ? "public" : "self");
+    const settings = typeof loadSettings === 'function' ? loadSettings() : {};
+    const multiUserOwner = normalizePhoneNumber(process.env.MESH_MULTI_USER_SESSION_OWNER);
+    const isMultiUserSession = Boolean(multiUserOwner);
+    let ownerRaw = multiUserOwner || settings.ownerNumber?.[0] || "92300xxxxxxx";
+    const ownerJid = ownerRaw.includes("@s.whatsapp.net") ? ownerRaw : ownerRaw + "@s.whatsapp.net";
 
-  // ✅ Flags
-  global.antilink = {};
-  global.antilinkick = {};
-  global.autogreet = {};
-  global.autotyping = false;
-  global.autoreact = autoreactControl.isAutoreactEnabled();
-  global.autostatus = false;
+    global.sock = sock;
+    setBotId(sock);
+    global.settings = settings;
+    global.signature = settings.signature || "> MESH TECH MD ✓";
+    global.owner = ownerJid;
+    global.ownerNumber = ownerRaw;
+    global.isMultiUserSession = isMultiUserSession;
+    global.mode = isMultiUserSession
+      ? (process.env.MESH_MULTI_USER_SESSION_MODE === "self" ? "self" : "public")
+      : (getValue("meshBotMode") === "public" ? "public" : "self");
 
-  console.log("✅ BOT OWNER:", global.owner);
+    global.antilink = {};
+    global.antilinkick = {};
+    global.autogreet = {};
+    global.autotyping = false;
+    global.autoreact = autoreactControl.isAutoreactEnabled();
+    global.autostatus = false;
 
-  sock.ev.on("creds.update", saveCreds);
+    console.log("✅ BOT OWNER:", global.owner);
 
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect } = update;
+    sock.ev.on("creds.update", saveCreds);
 
-    if (connection === "open") {  
-      console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
-      void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
-    }  
+    sock.ev.on("connection.update", async (update) => {
+      const { connection, lastDisconnect } = update;
 
-    if (connection === "close") {  
-      const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);  
-      console.log("❌ Disconnected. Reconnecting:", shouldReconnect);  
-      void notifyBotEvent({
-        event: shouldReconnect ? "whatsapp_disconnected" : "whatsapp_logged_out",
-        title: shouldReconnect ? "MESH AI bot disconnected" : "MESH AI bot needs attention",
-        body: shouldReconnect ? "WhatsApp disconnected. The hosted bot is attempting to reconnect." : "The WhatsApp session was logged out or stopped. Re-pair the bot when you can.",
-      });
-      if (shouldReconnect) startBot();  
-    }
-  });
+      if (connection === "open") {  
+        console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
+        isConnecting = false;
+        void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
+      }  
 
-  sock.ev.on("messages.upsert", async ({ messages }) => {
+      if (connection === "close") {  
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const shouldReconnect = (statusCode !== DisconnectReason.loggedOut);  
+        console.log(`❌ Disconnected (Status: ${statusCode}). Reconnecting: ${shouldReconnect}`);  
+        
+        isConnecting = false;
+        void notifyBotEvent({
+          event: shouldReconnect ? "whatsapp_disconnected" : "whatsapp_logged_out",
+          title: shouldReconnect ? "MESH AI bot disconnected" : "MESH AI bot needs attention",
+          body: shouldReconnect ? "WhatsApp disconnected. The hosted bot is attempting to reconnect." : "The WhatsApp session was logged out or stopped. Re-pair the bot when you can.",
+        });
+
+        if (shouldReconnect) {
+          // Remove all listeners to prevent memory leaks and duplicate responses
+          sock.ev.removeAllListeners();
+          setTimeout(() => startBot(), 3000);
+        }
+      }
+    });
+
+    sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     const jid = msg.key.remoteJid;
     const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
