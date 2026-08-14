@@ -49,8 +49,9 @@ function getStatusBox(timezone = 'Africa/Nairobi', userCount = 0, commandCount =
 ┃ 📌 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀: ${commandCount} 𝗟𝗼𝗮𝗱𝗲𝗱
 ┃ 👥 𝗨𝘀𝗲𝗿𝘀: ${userCount} Active (𝗿𝗲𝗮𝗹-𝘁𝗶𝗺𝗲)
 ┃ 🤖 𝗕𝗼𝘁𝘀 𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱: 1 𝗟𝗶𝘃𝗲
-┃ 📱 𝗗𝗲𝘃𝗶𝗰𝗲: ANDROID-CORE
-╰━━━━━━━━━━━━━━━━━━╯
+	┃ 📱 𝗗𝗲𝘃𝗶𝗰𝗲: ANDROID-CORE
+	┃ 🧠 RAM: ${Math.floor(Math.random() * (95 - 55 + 1)) + 55}/128 GB
+	╰━━━━━━━━━━━━━━━━━━╯
 `;
 }
 
