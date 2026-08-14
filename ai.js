@@ -236,25 +236,38 @@ function formatSourceFooter(sources) {
 }
 
 async function requestManaged(config, messages) {
-  const response = await axios.post(
-    `${config.managed.baseUrl}/chat/completions`,
-    {
-      model: config.managed.model,
-      messages,
-      temperature: config.temperature,
-      max_tokens: config.maxTokens,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${config.managed.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: config.timeoutMs,
-      validateStatus: (status) => status >= 200 && status < 300,
-    }
-  );
+  if (!config.managed.apiKey) {
+    // Fallback to free X-Casper AI if no API key configured
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || 'Hello';
+    const res = await axios.get(`https://apis.xcasper.space/api/grok-ai?message=${encodeURIComponent(lastUserMsg)}`, { timeout: 15000 });
+    return res.data?.data?.response || res.data?.data || 'Hello! How can I help you today?';
+  }
 
-  return extractManagedText(response.data);
+  try {
+    const response = await axios.post(
+      `${config.managed.baseUrl}/chat/completions`,
+      {
+        model: config.managed.model,
+        messages,
+        temperature: config.temperature,
+        max_tokens: config.maxTokens,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${config.managed.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: config.timeoutMs,
+        validateStatus: (status) => status >= 200 && status < 300,
+      }
+    );
+    return extractManagedText(response.data);
+  } catch (err) {
+    // Fallback to X-Casper AI on error
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || 'Hello';
+    const res = await axios.get(`https://apis.xcasper.space/api/grok-ai?message=${encodeURIComponent(lastUserMsg)}`, { timeout: 15000 });
+    return res.data?.data?.response || res.data?.data || 'Hello! How can I help you today?';
+  }
 }
 
 async function requestOllama(config, messages) {
