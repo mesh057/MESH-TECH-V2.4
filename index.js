@@ -67,22 +67,48 @@ const fsExtra = require('fs-extra');
 const path = require('path');
 
 // ✅ Instance Locking & PID Check to prevent ghost processes
-const LOCK_FILE = path.join(__dirname, 'tmp', 'bot.lock');
+const sessionID = process.env.MESH_PAIRING_PHONE_NUMBER || 'main';
+const LOCK_FILE = path.join(__dirname, 'tmp', `bot-${sessionID}.lock`);
 fsExtra.ensureDirSync(path.join(__dirname, 'tmp'));
 
-function acquireLock() {
+async function acquireLock() {
+  const maxRetries = 5;
+  const retryDelay = 2000;
+
+  for (let i = 0; i < maxRetries; i++) {
+    if (fsExtra.existsSync(LOCK_FILE)) {
+      const oldPid = parseInt(fsExtra.readFileSync(LOCK_FILE, 'utf8').trim());
+      if (oldPid === process.pid) return;
+
+      try {
+        process.kill(oldPid, 0);
+        console.log(`[System] ⏳ Old instance (PID ${oldPid}) is still shutting down... (Attempt ${i + 1}/${maxRetries})`);
+        await wait(retryDelay);
+      } catch (e) {
+        console.warn(`[System] ⚠️ Stale lock found (PID ${oldPid}). Cleaning up.`);
+        try { fsExtra.unlinkSync(LOCK_FILE); } catch (err) {}
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+
   if (fsExtra.existsSync(LOCK_FILE)) {
     const oldPid = parseInt(fsExtra.readFileSync(LOCK_FILE, 'utf8').trim());
     try {
       process.kill(oldPid, 0);
-      console.error(`[System] ❌ Another instance of V2.4 is already running (PID ${oldPid}). Exiting to prevent duplicates.`);
+      console.error(`[System] ❌ Another instance of V2.4 is still running (PID ${oldPid}). Exiting.`);
       process.exit(1);
-    } catch (e) {
-      console.warn(`[System] ⚠️ Stale lock found (PID ${oldPid}). Cleaning up.`);
-      fsExtra.unlinkSync(LOCK_FILE);
-    }
+    } catch (e) {}
   }
-  fsExtra.writeFileSync(LOCK_FILE, process.pid.toString());
+
+  try {
+    fsExtra.writeFileSync(LOCK_FILE, process.pid.toString());
+    console.log(`[System] ✅ Lock acquired (PID ${process.pid})`);
+  } catch (e) {
+    console.error('[System] ❌ Failed to write lock file:', e.message);
+  }
 }
 
 function releaseLock() {
@@ -94,7 +120,11 @@ function releaseLock() {
   } catch (e) {}
 }
 
-acquireLock();
+// Wrap startup in async to await lock
+(async () => {
+  await acquireLock();
+  await startBot();
+})();
 
 // ✅ Graceful shutdown handlers for zero-downtime updates (VPS / Railway)
 ['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach((signal) => {
