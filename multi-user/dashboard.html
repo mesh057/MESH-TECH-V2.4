@@ -358,7 +358,7 @@
                 if (data.success) {
                     statusBox.className = 'status-box success';
                     statusBox.textContent = '✅ Session successfully restored and bot is connecting!';
-                    document.getElementById('botStatusBadge.textContent = '🟢 CONNECTED';
+                    document.getElementById('botStatusBadge').textContent = '🟢 CONNECTED';
                 } else {
                     throw new Error(data.error || 'Failed to restore session.');
                 }
