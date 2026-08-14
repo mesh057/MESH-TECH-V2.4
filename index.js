@@ -147,10 +147,14 @@ async function startBot() {
   watchdogTimer = setTimeout(() => {
     if (isConnecting) {
       console.warn("[System] Connection watchdog triggered. Forcing restart...");
+      if (global.sock) {
+        try { global.sock.end(undefined); } catch (_) {}
+        global.sock = null;
+      }
       isConnecting = false;
       startBot();
     }
-  }, 120000); // 2 minutes
+  }, 60000); // 1 minute watchdog
 
   try {
     const authDir = "auth_info";

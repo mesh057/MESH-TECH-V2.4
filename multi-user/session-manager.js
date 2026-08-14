@@ -145,6 +145,8 @@ class MultiUserSessionManager {
         record.error = pairingError;
         record.status = 'error';
       }
+      if (/Connecting\.\.\./i.test(output)) record.status = 'connecting';
+      if (/Watchdog triggered/i.test(output)) record.status = 'retrying';
       if (/BOT OWNER|Connected|connection open/i.test(output) && !record.code) record.status = 'running';
     };
     child.stdout.on('data', consume);

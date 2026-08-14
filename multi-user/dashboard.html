@@ -357,8 +357,8 @@
 
                 if (data.success) {
                     statusBox.className = 'status-box success';
-                    statusBox.textContent = '✅ Session successfully restored and bot is connecting!';
-                    document.getElementById('botStatusBadge').textContent = '🟢 CONNECTED';
+                    statusBox.textContent = '✅ Session successfully restored! Checking connection status...';
+                    startStatusPolling(phoneNumber);
                 } else {
                     throw new Error(data.error || 'Failed to restore session.');
                 }
@@ -369,6 +369,46 @@
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-rocket"></i> Deploy & Connect Bot';
             }
+        }
+
+        let pollInterval = null;
+        function startStatusPolling(num) {
+            if (pollInterval) clearInterval(pollInterval);
+            const badge = document.getElementById('botStatusBadge');
+            const cleanNum = num.replace(/\D/g, '');
+            
+            pollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/status');
+                    const data = await res.json();
+                    const mySession = data.active?.find(s => s.number === cleanNum);
+                    
+                    if (mySession) {
+                        if (mySession.status === 'running') {
+                            badge.textContent = '🟢 ONLINE';
+                            badge.style.background = 'rgba(0, 255, 0, 0.1)';
+                            badge.style.color = '#00ff00';
+                        } else if (mySession.status === 'connecting') {
+                            const dots = '.'.repeat((Date.now() / 500) % 4);
+                            badge.textContent = '🟡 CONNECTING' + dots;
+                            badge.style.background = 'rgba(255, 255, 0, 0.1)';
+                            badge.style.color = '#ffff00';
+                        } else if (mySession.status === 'retrying') {
+                            badge.textContent = '🟠 RETRYING...';
+                            badge.style.background = 'rgba(255, 165, 0, 0.1)';
+                            badge.style.color = '#ffa500';
+                        } else if (mySession.status === 'error') {
+                            badge.textContent = '🔴 ERROR / LOGGED OUT';
+                            badge.style.background = 'rgba(255, 0, 0, 0.1)';
+                            badge.style.color = '#ff4444';
+                        }
+                    } else {
+                        badge.textContent = '⚪ INACTIVE';
+                        badge.style.background = 'rgba(255, 255, 255, 0.1)';
+                        badge.style.color = '#ffffff';
+                    }
+                } catch (e) {}
+            }, 3000);
         }
     </script>
 </body>
