@@ -90,6 +90,7 @@ const COMMAND_DESCRIPTIONS = {
   "shutdown": "Shuts down the bot process.",
   "block": "Block a user from the bot.",
   "unblock": "Unblock a user.",
+  "session": "Get Base64 SESSION_ID for persistence.",
   "kickall": "Remove all members from group.",
   "broadcast": "Send message to all chats."
 };
@@ -103,7 +104,7 @@ const WORKING_V24_GROUPS = [
   ['GROUP', '👥', ['kick', 'add', 'promote', 'demote', 'tagall', 'hidetag', 'welcome']],
   ['MEDIA', '📥', ['tiktok', 'ytmp3', 'ytmp4', 'fb', 'insta', 'qr', 'ss', 'shorten', 'removebg', 'enlarger', 'ocr', 'tempmail']],
   ['EDITORS', '🎨', ['fire', 'logo', 'glow', 'glass', 'balloon']],
-  ['OWNER', '👑', ['restart', 'shutdown', 'block', 'unblock', 'kickall', 'broadcast']],
+  ['OWNER', '👑', ['restart', 'shutdown', 'block', 'unblock', 'session', 'kickall', 'broadcast']],
 ];
 
 function formatGroup([title, emoji, commands]) {

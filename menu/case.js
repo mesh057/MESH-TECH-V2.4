@@ -220,6 +220,11 @@ async function runCommand({
       });
     }
 
+    // 🔸 session handler
+    if (command === "session") {
+      return require("../session")({ conn, m: msg, args, command, jid: chatId, isOwner, reply });
+    }
+
     // 🔸 antidelete handler
     if (command === "antidelete") {
       return toggleAntidelete({ conn, m: msg, args, reply, jid: chatId });

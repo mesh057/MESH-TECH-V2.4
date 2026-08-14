@@ -18,6 +18,7 @@ const antiBug = require("./antibug");
 const meshAi = require("./ai");
 const { getValue } = require("./system/storage");
 const { notifyBotEvent } = require("./multi-user/push-notifier");
+const { bootstrapSession } = require("./sessionBootstrap");
 
 function normalizePhoneNumber(value) {
   return String(value || "").replace(/\D/g, "");
@@ -142,10 +143,27 @@ async function startBot() {
   isConnecting = true;
 
   try {
-    const { state, saveCreds } = await useMultiFileAuthState("auth_info");
+    const authDir = "auth_info";
+    const sessionId = process.env.SESSION_ID;
+    if (sessionId) {
+      await bootstrapSession(sessionId, path.join(__dirname, authDir));
+    }
+
+    const { state, saveCreds } = await useMultiFileAuthState(authDir);
     const { version } = await fetchLatestBaileysVersion();
 
-    const sock = makeWASocket({ version, auth: state, logger: P({ level: "fatal" }) });
+    const sock = makeWASocket({ 
+      version, 
+      auth: state, 
+      logger: P({ level: "fatal" }),
+      browser: ["Ubuntu", "Chrome", "130.0.0.0"],
+      syncFullHistory: false,
+      markOnlineOnConnect: false,
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 0,
+      keepAliveIntervalMs: 10000,
+      generateHighQualityLinkPreview: true
+    });
 
     const settings = typeof loadSettings === 'function' ? loadSettings() : {};
     const multiUserOwner = normalizePhoneNumber(process.env.MESH_MULTI_USER_SESSION_OWNER);
