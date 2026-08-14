@@ -168,6 +168,11 @@ const server = http.createServer(async (req, res) => {
         fs.writeFileSync(path.join(authDir, 'creds.json'), rawJson);
       }
 
+      // If instance exists, we must stop it first to ensure it reloads the new credentials
+      if (manager.get(phoneNumber)) {
+          manager.stop(phoneNumber);
+      }
+
       // Start the bot session
       const session = await manager.start(phoneNumber);
       return json(res, 200, { success: true, message: 'Session restored successfully!', phoneNumber });
