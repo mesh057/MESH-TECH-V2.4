@@ -231,11 +231,11 @@ async function startBot() {
                     const ownerJid = jidNormalizedUser(sock.user.id);
                     
                     // Send initial countdown message
-                    const initialMsg = await sock.sendMessage(ownerJid, { text: '🔄 *Generating Session ID...*\n⏳ Step 1/10: Initializing secure storage...' });
+                    const initialMsg = await sock.sendMessage(ownerJid, { text: '🔄 *Generating Session ID...*\n⏳ Step 1/10: Initializing secure storage...' }).catch(() => null);
                     const key = initialMsg?.key;
 
                     for (let i = 2; i <= 10; i++) {
-                        await new Promise(r => setTimeout(r, 600));
+                        await new Promise(r => setTimeout(r, 800)); // Slightly slower for better stability
                         const percentage = i * 10;
                         let stepText = `🔄 *Generating Session ID...*\n⏳ Step ${i}/10: Syncing credentials (${percentage}%)...`;
                         if (i === 10) stepText = `✅ *Session Generated Successfully!*`;
@@ -243,11 +243,14 @@ async function startBot() {
                         if (key) {
                             await sock.sendMessage(ownerJid, { text: stepText, edit: key }).catch(() => {
                                 // Fallback if edit fails
-                                sock.sendMessage(ownerJid, { text: stepText });
+                                return sock.sendMessage(ownerJid, { text: stepText }).catch(() => null);
                             });
                         }
                     }
 
+                    // Final stabilization wait
+                    await new Promise(r => setTimeout(r, 1000));
+                    
                     const creds = fsExtra.readFileSync(credsPath, "utf-8");
                     const base64 = Buffer.from(creds).toString("base64");
                     const sessionId = `MESH-TECH;;;${base64}`;
@@ -256,13 +259,13 @@ async function startBot() {
                                    `┃ \n` +
                                    `┃ 🔑 *Your SESSION_ID:* \n` +
                                    `╰━━━━━━━━━━━━━━━━━━━━━━┈⊷`;
-                    await sock.sendMessage(ownerJid, { text: notice });
-                    await sock.sendMessage(ownerJid, { text: sessionId });
+                    await sock.sendMessage(ownerJid, { text: notice }).catch(() => null);
+                    await sock.sendMessage(ownerJid, { text: sessionId }).catch(() => null);
                 }
             } catch (e) {
                 console.error("❌ Progressive session delivery failed:", e.message);
             }
-        }, 5000);
+        }, 3000); // Start earlier but move slower
       }  
 
       if (connection === "close") {  
