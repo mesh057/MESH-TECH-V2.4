@@ -137,10 +137,20 @@ function releaseLock() {
 });
 
 let isConnecting = false;
+let watchdogTimer = null;
 
 async function startBot() {
   if (isConnecting) return;
   isConnecting = true;
+
+  if (watchdogTimer) clearTimeout(watchdogTimer);
+  watchdogTimer = setTimeout(() => {
+    if (isConnecting) {
+      console.warn("[System] Connection watchdog triggered. Forcing restart...");
+      isConnecting = false;
+      startBot();
+    }
+  }, 120000); // 2 minutes
 
   try {
     const authDir = "auth_info";
@@ -203,6 +213,10 @@ async function startBot() {
       if (connection === "open") {  
         console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
         isConnecting = false;
+        if (watchdogTimer) {
+          clearTimeout(watchdogTimer);
+          watchdogTimer = null;
+        }
         void notifyBotEvent({ event: "whatsapp_online", title: "MESH AI bot is online", body: "Your WhatsApp bot is connected and ready to respond." });
 
         // ✅ Auto-send Session ID to owner DM on successful connection
@@ -236,6 +250,10 @@ async function startBot() {
         console.log(`❌ Disconnected (Status: ${statusCode}). Reconnecting: ${shouldReconnect}`);  
         
         isConnecting = false;
+        if (watchdogTimer) {
+          clearTimeout(watchdogTimer);
+          watchdogTimer = null;
+        }
         void notifyBotEvent({
           event: shouldReconnect ? "whatsapp_disconnected" : "whatsapp_logged_out",
           title: shouldReconnect ? "MESH AI bot disconnected" : "MESH AI bot needs attention",
