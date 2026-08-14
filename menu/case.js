@@ -262,10 +262,11 @@ async function runCommand({
       return meshAi.chatbot({ args, chatId, sender: senderNum, isGroup, isOwner, reply });
     }
 
-    // 🔸 CASPER APIS
+    // 🔸 CASPER APIS (EXPANDED)
     const casperCommands = [
         'tiktok', 'tiktok2', 'tiktok3', 'yt', 'ytmp3', 'ytmp4', 'fb', 'ig', 'insta',
-        'google', 'spotify', 'lyrics', 'grok', 'mistral', 'casperai', 'shorten', 'qr', 'ss', 'screenshot'
+        'google', 'spotify', 'lyrics', 'grok', 'mistral', 'casperai', 'bible', 'quran',
+        'removebg', 'enlarger', 'colorize', 'ocr', 'tempmail', 'quote', 'joke', 'shorten', 'qr', 'ss', 'screenshot'
     ];
     if (casperCommands.includes(command)) {
         const xcasper = require('../xcasper');
