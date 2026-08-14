@@ -57,8 +57,8 @@ function getStatusBox(timezone = 'Africa/Nairobi', userCount = 0, commandCount =
 const MARKERS = ['➊', '➋', '➌', '➍', '➎', '➏', '➐', '➑', '➒', '➓'];
 
 const WORKING_V24_GROUPS = [
-  ['GENERAL', '✨', ['menu', 'help', 'commands', 'idcheck', 'repo']],
-  ['AI', '🤖', ['ai <question>', 'mesh <question>', 'ask <question>', 'chatbot on|off|status', 'agent on|off|status', 'task <goal>', 'task approve|deny|cancel <id>', 'tasks']],
+  ['GENERAL', '✨', ['menu', 'help', 'commands', 'idcheck', 'repo', 'google <query>', 'spotify <song>', 'lyrics <song>']],
+  ['AI', '🤖', ['ai <question>', 'mesh <question>', 'grok <msg>', 'mistral <msg>', 'casperai <msg>', 'chatbot on|off|status', 'agent on|off|status', 'task <goal>', 'tasks']],
   ['SYSTEM', '🌐', ['public', 'self', 'settings']],
   ['AUTOMATION', '🪅', [
     'autostatus on|off', 'autoviewstatus on|off', 'autoreactstatus on|off|status',
@@ -74,6 +74,10 @@ const WORKING_V24_GROUPS = [
     'kick @member', 'autogreet on|off', 'antilink on|off',
     'antilinkkick on|off|status', 'antilinkkick warning <message>',
     'antilinkkick strikes 3|clear',
+  ]],
+  ['MEDIA', '📥', [
+    'tiktok <url>', 'ytmp3 <url>', 'ytmp4 <url>', 'fb <url>', 'insta <url>',
+    'qr <text>', 'ss <url>', 'shorten <url>'
   ]],
 ];
 
