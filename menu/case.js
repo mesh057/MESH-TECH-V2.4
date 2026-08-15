@@ -99,11 +99,12 @@ async function handleCommand(conn, msg) {
     : msg.key.participant || msg.key.remoteJid;
 
   const senderNum = senderId.replace(/\D/g, "");
-  const botNum = (conn.user.id || "").replace(/\D/g, "");
+  const botNum = (conn?.user?.id || "").replace(/\D/g, "");
   const configuredOwners = (Array.isArray(global.owner) ? global.owner : [global.owner])
     .filter(Boolean)
     .map(jid => String(jid).replace(/\D/g, ""));
-  const isOwner = configuredOwners.includes(senderNum) || senderNum === botNum;
+  const isAuthenticated = Boolean(conn?.user?.id);
+  const isOwner = isAuthenticated && (senderNum === botNum || (!global.isMultiUserSession && configuredOwners.includes(senderNum)));
   const isDev = false; // No hidden developer bypass; ownership is fully controlled by settings.js
 
   const reply = (text) => conn.sendMessage(chatId, { text }, { quoted: msg });

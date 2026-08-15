@@ -9,7 +9,7 @@ async function sessionCommand({ conn, m, jid, isOwner, reply }) {
     }
 
     try {
-        const authDir = path.join(__dirname, 'auth_info');
+        const authDir = path.resolve(process.env.AUTH_DIR || path.join(__dirname, 'auth_info'));
         const credsPath = path.join(authDir, 'creds.json');
 
         if (!fs.existsSync(credsPath)) {

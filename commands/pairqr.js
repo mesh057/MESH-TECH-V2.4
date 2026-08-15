@@ -6,7 +6,11 @@ module.exports = {
   category: "owner",
   async execute(sock, msg, args) {
     const jid = msg.key.remoteJid;
-    const isOwner = msg.key.fromMe || global.ownerNumber.includes(msg.key.participant?.split("@")[0] || msg.key.remoteJid.split("@")[0]);
+    const activeBotJid = sock?.user?.id ? jidNormalizedUser(sock.user.id) : '';
+    const senderJid = msg.key.fromMe
+      ? activeBotJid
+      : jidNormalizedUser(msg.key.participant || msg.key.remoteJid || '');
+    const isOwner = Boolean(activeBotJid) && senderJid === activeBotJid;
 
     if (!isOwner) {
       return sock.sendMessage(jid, { text: "❌ This command is restricted to the bot owner." }, { quoted: msg });

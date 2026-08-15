@@ -127,6 +127,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/request-pairing') {
       if (!allowed(ip)) return json(res, 429, { success: false, error: 'Too many requests. Try again later.' });
       const data = await body(req);
+      if (!manager.hasSessionCapacity(data.phoneNumber)) {
+        return json(res, 429, { success: false, error: `Maximum active sessions reached (${manager.maxInstances}).` });
+      }
       const session = await manager.start(data.phoneNumber, data.useQr === true);
       return json(res, 200, { success: true, message: 'Session started. Poll /api/pairing-code for the code.', phoneNumber: session.number, accessToken: session.accessToken });
     }
@@ -139,6 +142,9 @@ const server = http.createServer(async (req, res) => {
 
       if (!phoneNumber || !sessionIdBase64) {
         return json(res, 400, { success: false, error: 'Phone number and session ID are required.' });
+      }
+      if (!manager.hasSessionCapacity(phoneNumber)) {
+        return json(res, 429, { success: false, error: `Maximum active sessions reached (${manager.maxInstances}).` });
       }
 
       const authDir = path.join(manager.sessionDir(phoneNumber), 'auth_info');

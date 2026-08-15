@@ -22,9 +22,13 @@ function extractPairingError(output) {
 
 class MultiUserSessionManager {
   constructor(options = {}) {
-    this.rootDir = path.resolve(options.rootDir || process.env.MULTI_USER_AUTH_DIR || 'auth_sessions');
+    this.rootDir = path.resolve(options.rootDir || process.env.MULTI_USER_AUTH_DIR || process.env.AUTH_DIR || 'auth_sessions');
     this.botEntry = path.resolve(options.botEntry || path.join(__dirname, '..', 'index.js'));
     this.sessions = new Map();
+    const rawLimit = String(options.maxInstances ?? process.env.MAX_BOT_INSTANCES ?? 'unlimited').trim().toLowerCase();
+    this.maxInstances = ['unlimited', 'infinite', 'infinity', '0', '-1', ''].includes(rawLimit)
+      ? Infinity
+      : Math.max(1, Number.parseInt(rawLimit, 10) || 1);
     fs.mkdirSync(this.rootDir, { recursive: true });
   }
 
@@ -78,6 +82,11 @@ class MultiUserSessionManager {
     return this.sessions.size;
   }
 
+  hasSessionCapacity(number) {
+    const normalized = this.normalizePhoneNumber(number);
+    return this.sessions.has(normalized) || this.sessions.size < this.maxInstances;
+  }
+
   list() {
     return [...this.sessions.values()].map(({ number, status, code, qr, pid, startedAt, lastOutput }) => ({
       number, status, code: code || null, qr: qr || null, pid: pid || null, startedAt, lastOutput,
@@ -87,9 +96,20 @@ class MultiUserSessionManager {
   async start(number, useQr = false) {
     const normalized = this.normalizePhoneNumber(number);
     const existing = this.sessions.get(normalized);
-    if (existing && !existing.child.killed) return this.publicSession(existing);
+    if (existing && existing.child && !existing.child.killed) return this.publicSession(existing);
+    if (existing) this.sessions.delete(normalized);
+
+    if (!this.hasSessionCapacity(normalized)) {
+      const error = new Error(`Maximum active sessions reached (${this.maxInstances}).`);
+      error.code = 'SESSION_CAPACITY_REACHED';
+      throw error;
+    }
 
     const authDir = this.sessionDir(normalized);
+    const authInfoDir = path.join(authDir, 'auth_info');
+    const dataDir = path.join(authDir, 'data');
+    fs.mkdirSync(authInfoDir, { recursive: true });
+    fs.mkdirSync(dataDir, { recursive: true });
     fs.mkdirSync(authDir, { recursive: true });
     const accessToken = crypto.randomBytes(32).toString('hex');
     const record = {
@@ -115,6 +135,10 @@ class MultiUserSessionManager {
         MESH_PAIRING_PHONE_NUMBER: normalized,
         MESH_MULTI_USER_SESSION_OWNER: normalized,
         MESH_MULTI_USER_SESSION_MODE: 'public',
+        MESH_MULTI_USER_SESSION_DIR: authDir,
+        MULTI_USER_AUTH_DIR: this.rootDir,
+        AUTH_DIR: authInfoDir,
+        DATA_FILE: path.join(dataDir, 'database.json'),
         MESH_PAIRING_MODE: useQr ? 'qr' : 'code',
       },
       // The original bot keeps using auth_info; running it from this user’s

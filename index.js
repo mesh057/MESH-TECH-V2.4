@@ -26,6 +26,10 @@ function normalizePhoneNumber(value) {
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
+function isAuthenticated(sock) {
+  return Boolean(sock?.user?.id);
+}
+
 async function requestPairingCodeWithRetries(sock, phoneNumber) {
   let lastError = new Error("WhatsApp did not return a pairing code.");
   for (let attempt = 1; attempt <= 4; attempt += 1) {
@@ -157,10 +161,10 @@ async function startBot() {
   }, 60000); // 1 minute watchdog
 
   try {
-    const authDir = "auth_info";
+    const authDir = path.resolve(process.env.AUTH_DIR || "auth_info");
     const sessionId = process.env.SESSION_ID;
     if (sessionId) {
-      await bootstrapSession(sessionId, path.join(__dirname, authDir));
+      await bootstrapSession(sessionId, authDir);
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
@@ -214,8 +218,20 @@ async function startBot() {
         console.log(`PAIRING_QR ${qr}`);
       }
 
-      if (connection === "open") {  
-        console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
+      if (connection === "open") {
+        if (!isAuthenticated(sock)) {
+          console.warn("⚠️ WhatsApp reported open before an authenticated account identity was available.");
+          isConnecting = false;
+          return;
+        }
+
+        const authenticatedOwner = jidNormalizedUser(sock.user.id);
+        if (isMultiUserSession) {
+          global.owner = authenticatedOwner;
+          global.ownerNumber = authenticatedOwner.replace(/@s\.whatsapp\.net$/, "").split(":")[0];
+        }
+
+        console.log("✅ [BOT ONLINE] Connected to WhatsApp!");
         isConnecting = false;
         if (watchdogTimer) {
           clearTimeout(watchdogTimer);
@@ -309,10 +325,10 @@ async function startBot() {
     }
 
     // ✅ AutoTyping (Non-blocking)
-    if (global.autotyping && jid !== "status@broadcast") {  
+    if (global.autotyping && jid !== "status@broadcast" && isAuthenticated(sock)) {
       // Optimization: Do not await presence updates to avoid blocking the message loop
       sock.sendPresenceUpdate('composing', jid).catch(err => console.error("❌ AutoTyping Error:", err.message));
-    }  
+    }
 
     // ✅ AutoReact
     if (global.autoreact && jid !== "status@broadcast") {
